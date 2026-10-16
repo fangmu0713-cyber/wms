@@ -1,0 +1,406 @@
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+test_100_received_3_shipped_97_balance_and_restart (test_core.WarehouseIntegrationTests.test_100_received_3_shipped_97_balance_and_restart) ... api_request status=200 duration_ms=4.1
+api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=3.4
+api_request status=200 duration_ms=2.8
+api_request status=200 duration_ms=3.4
+api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=3.0
+api_request status=200 duration_ms=3.2
+api_request status=200 duration_ms=2.8
+api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=3.1
+api_request status=200 duration_ms=4.8
+api_request status=200 duration_ms=3.8
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=2.4
+api_request status=200 duration_ms=3.0
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=3.4
+api_request status=200 duration_ms=3.2
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=2.6
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.1
+api_request status=200 duration_ms=3.9
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=1.7
+api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=1.7
+api_request status=200 duration_ms=3.3
+api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=2.9
+api_request status=409 duration_ms=3.7
+api_request status=409 duration_ms=3.4
+api_request status=200 duration_ms=2.8
+api_request status=200 duration_ms=2.6
+api_request status=200 duration_ms=4.0
+ok
+test_authentication_and_idempotency_are_required (test_core.WarehouseIntegrationTests.test_authentication_and_idempotency_are_required) ... api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.6
+api_request status=401 duration_ms=0.9
+api_request status=401 duration_ms=1.1
+api_request status=422 duration_ms=1.0
+ok
+test_cancel_before_pick_releases_only_reservation (test_core.WarehouseIntegrationTests.test_cancel_before_pick_releases_only_reservation) ... api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=3.7
+api_request status=200 duration_ms=3.2
+api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=3.1
+api_request status=200 duration_ms=2.1
+api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=2.6
+api_request status=200 duration_ms=3.4
+api_request status=200 duration_ms=3.1
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.4
+api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.6
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.4
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=3.1
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=3.7
+api_request status=200 duration_ms=3.0
+api_request status=409 duration_ms=1.9
+ok
+test_concurrent_duplicate_receipt_creates_single_record (test_core.WarehouseIntegrationTests.test_concurrent_duplicate_receipt_creates_single_record) ... api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.4
+api_request status=200 duration_ms=2.4
+api_request status=200 duration_ms=3.4
+api_request status=200 duration_ms=34.1
+api_request status=200 duration_ms=19.9
+api_request status=200 duration_ms=7.3
+api_request status=200 duration_ms=11.2
+api_request status=200 duration_ms=35.1
+api_request status=200 duration_ms=17.0
+api_request status=200 duration_ms=43.4
+api_request status=200 duration_ms=35.1
+api_request status=200 duration_ms=39.1
+api_request status=200 duration_ms=42.4
+api_request status=200 duration_ms=3.2
+ok
+test_concurrent_last_item_only_one_reservation (test_core.WarehouseIntegrationTests.test_concurrent_last_item_only_one_reservation) ... api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=2.8
+api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=4.9
+api_request status=409 duration_ms=5.9
+api_request status=200 duration_ms=3.3
+api_request status=200 duration_ms=3.1
+ok
+test_failed_multiline_reservation_rolls_back_every_line (test_core.WarehouseIntegrationTests.test_failed_multiline_reservation_rolls_back_every_line) ... api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=1.7
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=3.9
+api_request status=200 duration_ms=1.8
+api_request status=200 duration_ms=2.4
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.4
+api_request status=200 duration_ms=3.5
+api_request status=409 duration_ms=2.8
+api_request status=200 duration_ms=3.3
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=3.0
+ok
+test_idempotent_receive_scan_fee_and_conflicting_payload (test_core.WarehouseIntegrationTests.test_idempotent_receive_scan_fee_and_conflicting_payload) ... api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=3.5
+api_request status=200 duration_ms=1.7
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=1.6
+api_request status=409 duration_ms=1.8
+api_request status=200 duration_ms=3.0
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=1.6
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.1
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=3.8
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=3.0
+api_request status=200 duration_ms=2.6
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=2.6
+api_request status=200 duration_ms=2.8
+api_request status=200 duration_ms=1.6
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=1.6
+api_request status=200 duration_ms=1.5
+api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=1.7
+api_request status=200 duration_ms=1.7
+api_request status=200 duration_ms=2.4
+api_request status=200 duration_ms=3.0
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.1
+api_request status=200 duration_ms=1.8
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=1.8
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=1.6
+api_request status=200 duration_ms=1.7
+api_request status=409 duration_ms=2.5
+api_request status=200 duration_ms=3.1
+ok
+test_owner_tenant_and_warehouse_server_isolation (test_core.WarehouseIntegrationTests.test_owner_tenant_and_warehouse_server_isolation) ... api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=3.0
+api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=3.4
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=2.6
+api_request status=200 duration_ms=3.3
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.6
+api_request status=404 duration_ms=1.4
+api_request status=404 duration_ms=1.4
+api_request status=404 duration_ms=1.5
+api_request status=404 duration_ms=2.3
+api_request status=404 duration_ms=1.7
+api_request status=200 duration_ms=2.7
+api_request status=409 duration_ms=1.9
+api_request status=200 duration_ms=3.4
+api_request status=200 duration_ms=2.8
+api_request status=200 duration_ms=2.6
+api_request status=404 duration_ms=2.5
+api_request status=404 duration_ms=2.4
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.9
+api_request status=404 duration_ms=1.8
+api_request status=403 duration_ms=2.4
+ok
+test_qc_rejected_units_never_become_sellable (test_core.WarehouseIntegrationTests.test_qc_rejected_units_never_become_sellable) ... api_request status=200 duration_ms=3.2
+api_request status=200 duration_ms=3.1
+api_request status=200 duration_ms=2.6
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.8
+api_request status=422 duration_ms=2.5
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=3.5
+api_request status=200 duration_ms=2.4
+api_request status=200 duration_ms=2.6
+api_request status=200 duration_ms=3.0
+api_request status=200 duration_ms=3.2
+api_request status=200 duration_ms=5.8
+api_request status=409 duration_ms=2.4
+api_request status=409 duration_ms=2.9
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=3.0
+ok
+test_returns_require_receive_qc_and_putaway_exactly_once (test_core.WarehouseIntegrationTests.test_returns_require_receive_qc_and_putaway_exactly_once) ... api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=3.2
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=2.1
+api_request status=200 duration_ms=3.3
+api_request status=200 duration_ms=2.1
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=3.1
+api_request status=200 duration_ms=3.5
+api_request status=200 duration_ms=3.4
+api_request status=200 duration_ms=2.7
+api_request status=409 duration_ms=4.2
+api_request status=409 duration_ms=2.1
+api_request status=200 duration_ms=2.6
+api_request status=200 duration_ms=3.5
+api_request status=200 duration_ms=3.8
+api_request status=200 duration_ms=3.2
+api_request status=409 duration_ms=1.7
+api_request status=200 duration_ms=2.6
+api_request status=200 duration_ms=3.3
+api_request status=200 duration_ms=3.5
+api_request status=200 duration_ms=3.5
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=1.8
+api_request status=200 duration_ms=3.0
+api_request status=200 duration_ms=2.1
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=1.8
+api_request status=200 duration_ms=1.6
+api_request status=409 duration_ms=3.2
+api_request status=200 duration_ms=3.4
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=3.2
+api_request status=409 duration_ms=2.3
+ok
+test_role_readonly_expired_and_revoked_credentials (test_core.WarehouseIntegrationTests.test_role_readonly_expired_and_revoked_credentials) ... api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.4
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=3.1
+api_request status=200 duration_ms=4.6
+api_request status=200 duration_ms=2.4
+api_request status=200 duration_ms=3.3
+api_request status=403 duration_ms=1.9
+api_request status=403 duration_ms=2.4
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=3.5
+api_request status=403 duration_ms=4.3
+api_request status=401 duration_ms=1.6
+api_request status=401 duration_ms=1.8
+api_request status=200 duration_ms=3.4
+api_request status=200 duration_ms=4.1
+ok
+test_unique_references_and_invalid_quantity (test_core.WarehouseIntegrationTests.test_unique_references_and_invalid_quantity) ... api_request status=200 duration_ms=2.4
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=1.7
+api_request status=200 duration_ms=2.7
+api_request status=409 duration_ms=1.6
+api_request status=200 duration_ms=2.6
+api_request status=409 duration_ms=2.5
+api_request status=422 duration_ms=1.2
+api_request status=422 duration_ms=1.4
+api_request status=422 duration_ms=1.2
+api_request status=422 duration_ms=1.1
+api_request status=200 duration_ms=2.8
+ok
+test_wrong_scans_overquantity_and_premature_actions (test_core.WarehouseIntegrationTests.test_wrong_scans_overquantity_and_premature_actions) ... api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=1.8
+api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=2.4
+api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=6.1
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=3.1
+api_request status=200 duration_ms=2.6
+api_request status=409 duration_ms=2.1
+api_request status=200 duration_ms=3.0
+api_request status=409 duration_ms=2.2
+api_request status=409 duration_ms=3.5
+api_request status=409 duration_ms=2.3
+api_request status=409 duration_ms=3.1
+api_request status=409 duration_ms=1.8
+api_request status=409 duration_ms=2.4
+api_request status=200 duration_ms=3.1
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=2.7
+api_request status=409 duration_ms=2.9
+api_request status=409 duration_ms=2.7
+api_request status=409 duration_ms=2.6
+api_request status=409 duration_ms=2.5
+api_request status=200 duration_ms=3.8
+api_request status=200 duration_ms=2.9
+ok
+test_documented_upseller_reads_fail_closed (test_integrations.IntegrationBoundaryTests.test_documented_upseller_reads_fail_closed) ... ok
+test_pending_vendor_never_acknowledges_orders_shipments_or_stock_writes (test_integrations.IntegrationBoundaryTests.test_pending_vendor_never_acknowledges_orders_shipments_or_stock_writes) ... ok
+test_registry_exposes_no_live_or_implemented_vendor_capability (test_integrations.IntegrationBoundaryTests.test_registry_exposes_no_live_or_implemented_vendor_capability) ... ok
+test_registry_mutation_does_not_enable_connectors_or_change_sources (test_integrations.IntegrationBoundaryTests.test_registry_mutation_does_not_enable_connectors_or_change_sources) ... ok
+test_unknown_vendor_and_capability_are_rejected (test_integrations.IntegrationBoundaryTests.test_unknown_vendor_and_capability_are_rejected) ... ok
+test_bootstrap_credentials_protected_not_printed_or_overwritten (test_recovery.RecoveryIntegrationTests.test_bootstrap_credentials_protected_not_printed_or_overwritten) ... api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=2.4
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.8
+api_request status=200 duration_ms=2.8
+ok
+test_consistent_backup_restore_reconciles_without_changing_source (test_recovery.RecoveryIntegrationTests.test_consistent_backup_restore_reconciles_without_changing_source) ... api_request status=200 duration_ms=2.4
+api_request status=200 duration_ms=2.6
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=2.1
+api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=3.4
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=3.0
+api_request status=200 duration_ms=3.4
+api_request status=200 duration_ms=3.0
+api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=3.4
+api_request status=200 duration_ms=2.7
+api_request status=200 duration_ms=3.1
+api_request status=200 duration_ms=3.4
+api_request status=200 duration_ms=4.1
+api_request status=200 duration_ms=3.0
+ok
+test_repeat_migrations_and_append_only_ledger (test_recovery.RecoveryIntegrationTests.test_repeat_migrations_and_append_only_ledger) ... api_request status=200 duration_ms=1.9
+api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=1.8
+api_request status=200 duration_ms=2.6
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=3.7
+api_request status=200 duration_ms=2.8
+api_request status=200 duration_ms=3.3
+api_request status=200 duration_ms=3.2
+api_request status=200 duration_ms=2.7
+ok
+
+----------------------------------------------------------------------
+Ran 21 tests in 2.645s
+
+OK

@@ -1,0 +1,25 @@
+services:
+  wms:
+    build: .
+    image: overseas-wms:0.1.0
+    ports:
+      - "127.0.0.1:${WMS_PORT:-8000}:8000"
+    environment:
+      WMS_DB_PATH: /data/wms.sqlite3
+    volumes:
+      - wms_data:/data
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  wms_data:
