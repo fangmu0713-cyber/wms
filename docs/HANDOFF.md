@@ -40,6 +40,6 @@ WMS_EVIDENCE_DIR=evidence/stage3/legacy python -m tests.browser_flow -v
 
 ## 交付与外部限制
 
-本轮准备独立GitHub分支/草稿PR作持久审阅入口，实际推送/PR结果以最终交付和链接记录为准；未合并主分支、未部署生产。若远程不可用，保留源码包/bundle并明确未推送，不能以本地commit冒称远程已保存。
+本轮已推送独立分支`codex/wms-warehouse-movements`，草稿PR：https://github.com/fangmu0713-cyber/wms/pull/1 。未合并主分支、未部署生产。新环境应先检出该分支并核对远程SHA，不再仅从main初始README或旧阶段1包续接；准确提交见git log。
 
 环境会重置，不依赖临时路径或旧聊天进程存活。源码包只包含受控源码、测试证据与可用Git历史，不含运行库、令牌、依赖wheels。ERP、服务器/域名、生产部署和设备均仍未授权/验收，不改任何代理VPS、SSH、安全组或外部运行服务。
