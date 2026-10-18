@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
 
 Text = Annotated[str, Field(min_length=1, max_length=160, strip_whitespace=True)]
@@ -81,3 +81,16 @@ class Fee(Input):
 
 class Empty(Input):
     pass
+
+class Wave(Input):
+    owner_id: Text
+    warehouse_id: Text
+    reference: Text
+    order_ids: Annotated[list[Text], Field(min_length=1, max_length=100)]
+
+class Movement(Input):
+    source_inventory_id: Text
+    destination_location_id: Text
+    kind: Literal['MOVE', 'REPLENISHMENT']
+    reference: Text
+    qty: Qty

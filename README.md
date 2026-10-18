@@ -1,6 +1,6 @@
 # Overseas WMS / OMS
 
-可独立部署的海外仓系统，当前交付阶段 1 的真实内部履约闭环。中文/巴西葡语 WMS、货主 OMS、移动 PDA 页面使用同一认证后端和持久数据库。**未正式接通任何 ERP，未部署生产。**
+可独立部署的海外仓系统，当前0.3.0交付阶段1真实内部履约闭环、波次/独立拣货任务与同仓人工补货/移位。中文/巴西葡语 WMS、货主 OMS、移动 PDA 页面使用同一认证后端和持久数据库。**未正式接通任何 ERP，未部署生产。**
 
 实际流程：货主/仓库/SKU → 实际收货 → 质检 → 上架 → 手工或本系统 API 订单 → 预占 → 扫码拣货/复核 → 打包 → 交接出库 → 库存流水/余额核对。附关联退货和 BRL 手工费用防重。
 
@@ -17,6 +17,7 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log
 python -m pip install -r requirements-test.txt
 python -m unittest discover -s tests -v
 python -m tests.browser_flow -v
+python -m tests.browser_warehouse -v
 python -m tests.load_probe
 ```
 
@@ -29,4 +30,8 @@ python -m tests.load_probe
 - [ERP 权限与能力](docs/ERP_CAPABILITIES.md)、[官方参考矩阵](docs/reference-matrix.md)
 - [验收证据](evidence/VALIDATION.md)、[完整任务书](docs/Codex_Overseas_WMS_Master_Task.md)
 
-单节点模块化单体：FastAPI + SQLite WAL，事务更新余额/只追加账本/幂等记录/审计。高吞吐多节点、波次盘点调拨、正式账单、物流面单、设备、持久同步队列等不在本次已完成范围；按任务板续接，不能用空页面计入完成。
+单节点模块化单体：FastAPI + SQLite WAL，事务更新余额/只追加账本/幂等记录/审计。高吞吐多节点、盘点/跨仓调拨、自动补货、正式账单、物流面单、设备、持久同步队列等不在本次已完成范围；按任务板续接，不能用空页面计入完成。
+
+库内作业：创建补货/移位任务锁定可用库存 → 领取 → 来源扫码搬出 → 库内搬运中 → 目标扫码到位。待搬和搬运中均不可再次预占；搬运中仍属于本仓保管实物。当前仅同仓、整任务数量、人工发起；不含自动补货、部分接收、损耗处理或跨仓调拨。波次完成仅代表拣货完成，仍需逐单复核/打包/交接。
+
+本轮云环境重置后恢复了阶段1并重建上轮波次，重新运行验收；具体来源、限制和后续在HANDOFF。不要只依赖临时下载路径保存项目，应保留源码包或使用已确认推送的分支。

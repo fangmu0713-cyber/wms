@@ -2,3 +2,8 @@
 /* Keep fixed navigation and skip navigation stable in full-page captures. */
 .skip-link{top:8px;transform:translateY(-200%);text-decoration:none;color:var(--green);border:1px solid var(--line);border-radius:6px}.skip-link:focus{transform:translateY(0)}
 #logout{white-space:nowrap;flex-shrink:0}
+
+/* Warehouse task tables scroll within their cards on mobile. */
+#wave-records table,#movement-records table{min-width:1000px}
+#task-records table{min-width:1500px}
+#wave-records td,#task-records td,#movement-records td{white-space:nowrap;overflow-wrap:normal;word-break:normal}

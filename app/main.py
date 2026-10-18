@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request, Depends, Header
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import HTTPBearer
 from fastapi.staticfiles import StaticFiles
-from . import db as database, models, service
+from . import db as database, models, service, waves, movements
 from .auth import digest
 
 LOG = logging.getLogger('wms')
@@ -35,7 +35,7 @@ def authenticate(db, request):
 
 def create_app(db_path=None):
     path = str(db_path or database.default_path())
-    app = FastAPI(title='Overseas WMS / OMS',version='0.1.0',docs_url=None,redoc_url=None,description='Internal WMS API; no third-party ERP is enabled. Mutations require Idempotency-Key. Quantities are units, money BRL cents.')
+    app = FastAPI(title='Overseas WMS / OMS',version='0.3.0',docs_url=None,redoc_url=None,description='Internal WMS API; no third-party ERP is enabled. Mutations require Idempotency-Key. Quantities are units, money BRL cents.')
     app.state.db_path = path
     failures = defaultdict(deque)
     security = HTTPBearer(auto_error=False)
@@ -118,6 +118,26 @@ def create_app(db_path=None):
     add_post('/api/orders',models.Order,lambda db,a,k,d:service.create_order(db,a,d))
     add_post('/api/returns',models.Return,lambda db,a,k,d:service.create_return(db,a,d))
     add_post('/api/fees',models.Fee,lambda db,a,k,d:service.create_fee(db,a,d))
+    add_post('/api/waves',models.Wave,lambda db,a,k,d:waves.create(db,a,d))
+    add_post('/api/movements',models.Movement,lambda db,a,k,d:movements.create(db,a,k,d))
+
+    def add_movement_action(action, model):
+        def endpoint(object_id: str, request: Request, payload: model):
+            return execute(request,payload.model_dump(),lambda db,a,k,d:movements.action(db,a,k,object_id,action,d))
+        app.add_api_route('/api/movements/{object_id}/'+action,endpoint,methods=['POST'],name='movements_'+action,dependencies=[Depends(security),Depends(require_idempotency)])
+
+    for action, model in (('claim',models.Empty),('release',models.Empty),('cancel',models.Empty),('dispatch',models.Pick),('receive',models.Pick)):
+        add_movement_action(action,model)
+
+    def add_wave_action(table, action, model):
+        def endpoint(object_id: str, request: Request, payload: model):
+            operation = (lambda db,a,k,d:waves.cancel(db,a,object_id)) if table=='waves' else (lambda db,a,k,d:waves.task_action(db,a,k,object_id,action,d))
+            return execute(request,payload.model_dump(),operation)
+        app.add_api_route('/api/'+table+'/{object_id}/'+action,endpoint,methods=['POST'],name=table+'_'+action,dependencies=[Depends(security),Depends(require_idempotency)])
+
+    add_wave_action('waves','cancel',models.Empty)
+    for action, model in (('claim',models.Empty),('release',models.Empty),('scan',models.Pick)):
+        add_wave_action('pick_tasks',action,model)
 
     def add_action(table, action, model):
         def endpoint(object_id: str, request: Request, payload: model):
@@ -158,16 +178,22 @@ def create_app(db_path=None):
                 actor = authenticate(db,request)
                 if table=='fees':
                     service.permit(actor,'finance','owner','owner_readonly')
+                if table in ('waves','pick_tasks'):
+                    service.permit(actor,'staff','picker')
+                if table=='movements':
+                    service.permit(actor,*movements.EXECUTION_ROLES)
                 return service.get(db,actor,table,object_id)
         app.add_api_route('/api/'+table+'/{object_id}',endpoint,methods=['GET'],name=table+'_get',dependencies=[Depends(security)])
-    for table in ('owners','warehouses','locations','skus','stores','receipts','orders','inventory','ledger','returns','fees'):
+    for table in ('owners','warehouses','locations','skus','stores','receipts','orders','inventory','ledger','returns','fees','waves','pick_tasks','movements'):
         add_get(table)
 
     @app.get('/health')
     def health():
         try:
             with database.connect(path) as db:
-                ready = db.execute('SELECT COUNT(*) FROM schema_migrations').fetchone()[0]>=1
+                required = {script.name for script in (Path(__file__).parent/'migrations').glob('*.sql')}
+                applied = {row[0] for row in db.execute('SELECT version FROM schema_migrations')}
+                ready = required <= applied
                 db.execute('SELECT 1 FROM inventory LIMIT 1')
             return JSONResponse({'status':'ok' if ready else 'not_ready'},status_code=200 if ready else 503)
         except sqlite3.Error:

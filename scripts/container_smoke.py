@@ -59,7 +59,7 @@ def main():
     docker('volume','create',volume)
     try:
         docker('run','-d','--name',name,'--network','none','--read-only','--tmpfs','/tmp:rw,size=32m',
-               '--cap-drop','ALL','--security-opt','no-new-privileges','-v',volume+':/data','overseas-wms:0.1.0')
+               '--cap-drop','ALL','--security-opt','no-new-privileges','-v',volume+':/data','overseas-wms:0.3.0')
         def ready():
             for _ in range(30):
                 try:

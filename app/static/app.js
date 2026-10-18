@@ -34,6 +34,7 @@ zh.retryPending = "重试待确认的原提交"; pt.retryPending = "Repetir envi
 zh.feeHelp = "管理员和财务可手工登记已出库订单费用，金额以 BRL 分为单位。相同订单和收费代码禁止重复收费；自动报价、仓租与账单尚未实现。";
 pt.feeHelp = "Administradores e financeiro podem registrar custos de pedidos expedidos em centavos de BRL. Pedido e código de cobrança não podem se repetir. Tarifas automáticas, armazenagem e faturas não foram implementadas.";
 const descriptions = {overview:"description",masters:"masterHelp",inbound:"masterHelp",orders:"orderHelp",pda:"pdaDescription",inventory:"inventoryHelp",returns:"returnHelp",finance:"feeHelp",integrations:"erpHelp",roadmap:"productionHelp"};
+Object.assign(zh,warehouseConfig.zh); Object.assign(pt,warehouseConfig.pt); Object.assign(states,warehouseConfig.states); Object.assign(actionRoles,warehouseConfig.roles); Object.assign(descriptions,warehouseConfig.descriptions);
 const t = key => (language === "pt-BR" ? pt[key] : zh[key]) || zh[key] || key;
 const $ = selector => document.querySelector(selector);
 function node(tag, text, className) { const el = document.createElement(tag); if (text !== undefined) el.textContent = String(text); if (className) el.className = className; return el; }
@@ -73,7 +74,7 @@ async function api(path, body, key, loginToken) {
     if (body !== undefined) { headers["Content-Type"] = "application/json"; headers["Idempotency-Key"] = key; }
     const response = await fetch(path, {method:body === undefined ? "GET" : "POST", headers, ...(body === undefined ? {} : {body:JSON.stringify(body)}), signal:controller.signal, cache:"no-store", credentials:"same-origin"});
     let data; try { data = await response.json(); } catch { throw new Error(t("serverError")); }
-    if (!response.ok) { const error = new Error(typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail || t("failure"))); error.status = response.status; throw error; }
+    if (!response.ok) { const error = new Error(typeof data.detail === "string" ? t(data.detail) : JSON.stringify(data.detail || t("failure"))); error.status = response.status; throw error; }
     return data;
   } catch (error) { if (error.name === "AbortError" || error instanceof TypeError) { const unknown = new Error(`${t("networkError")} ${t("unknown")}`); unknown.uncertain = true; throw unknown; } throw error; }
   finally { clearTimeout(timeout); }
@@ -89,6 +90,7 @@ const field = (name, type = "text", extra = {}) => ({name, type, ...extra});
 const select = (name, source, statuses) => field(name, "select", {source, statuses});
 const qty = (name = "qty", min = 1) => field(name, "number", {min, value:min === 0 ? 0 : 1});
 const schemas = [
+  ...warehouseConfig.schemas,
   {id:"owner",area:"master",title:"ownerCreate",path:"/api/owners",admin:true,fields:[field("name")]},
   {id:"warehouse",area:"master",title:"warehouseCreate",path:"/api/warehouses",admin:true,fields:[field("name"),field("timezone","text",{value:"America/Sao_Paulo"})]},
   {id:"location",area:"master",title:"locationCreate",path:"/api/locations",staff:true,fields:[select("warehouse_id","warehouses"),field("code")]},
@@ -114,7 +116,12 @@ function makeField(spec, prefix) {
   const wrapper = node("div", undefined, "field"), id = `${prefix}-${spec.name}`;
   const label = node("label", t(spec.name)); label.htmlFor = id; label.dataset.i18n = spec.name; wrapper.append(label);
   const input = document.createElement(spec.type === "select" ? "select" : "input"); input.name = spec.name; input.id = id; input.required = true; input.dataset.testid = id;
-  if (spec.type === "select") { input.dataset.source = spec.source; if (spec.statuses) input.dataset.statuses = spec.statuses.join(","); }
+  if (spec.type === "select") {
+    if (spec.options) { input.dataset.options = JSON.stringify(spec.options); spec.options.forEach(value => { const option = node("option",t(value)); option.value = value; input.append(option); }); }
+    else input.dataset.source = spec.source;
+    if (spec.statuses) input.dataset.statuses = spec.statuses.join(",");
+    if (spec.multiple) { input.multiple = true; input.size = 6; }
+  }
   else { input.type = spec.type; input.autocomplete = "off"; input.maxLength = 200; if (spec.value !== undefined) { input.value = spec.value; input.defaultValue = spec.value; } if (spec.type === "number") { input.min = spec.min; input.max = 1000000000; input.step = "1"; input.inputMode = "numeric"; } if (spec.name === "barcode") { input.spellcheck = false; input.setAttribute("autocapitalize","off"); } }
   wrapper.append(input); return wrapper;
 }
@@ -139,14 +146,30 @@ function buildForms() {
   addOrderLine();
 }
 function populateSelects(root = document) {
+  $('[data-view="waves"]').hidden = !user || !["admin","staff","picker"].includes(user.role);
+  $('[data-view="movements"]').hidden = !user || !["admin","staff","picker","receiver"].includes(user.role);
+  root.querySelectorAll("select[data-options]").forEach(selectEl => [...selectEl.options].forEach(option => { option.textContent = t(option.value); }));
   root.querySelectorAll("select[data-source]").forEach(selectEl => {
-    const previous = selectEl.value, statuses = selectEl.dataset.statuses?.split(",");
+    const previous = selectEl.value, statuses = selectEl.dataset.statuses?.split(","), selected = new Set([...selectEl.selectedOptions].map(option => option.value));
     let items = array(selectEl.dataset.source); if (statuses) items = items.filter(record => statuses.includes(record.status));
     const form = selectEl.closest("form"), ownerId = form?.querySelector('[name="owner_id"]')?.value, warehouseId = form?.querySelector('[name="warehouse_id"]')?.value;
     if (["skus","stores"].includes(selectEl.dataset.source) && ownerId) items = items.filter(item => item.owner_id === ownerId);
     if (selectEl.dataset.source === "locations" && warehouseId) items = items.filter(item => item.warehouse_id === warehouseId);
+    if (selectEl.name === "order_ids") items = items.filter(item => (!ownerId || item.owner_id === ownerId) && (!warehouseId || item.warehouse_id === warehouseId) && !array("wave_orders").some(link => link.order_id === item.id && link.active));
+    if (selectEl.dataset.source === "pick_tasks" && ["task-scan-form","task-release-form"].includes(form?.id)) items = items.filter(item => item.assignee_id === user?.id && (form.id !== "task-release-form" || item.picked_qty === 0));
+    if (form?.id === "pick-form" && selectEl.name === "order_id") items = items.filter(item => !array("wave_orders").some(link => link.order_id === item.id && link.active));
+    if (selectEl.name === "source_inventory_id") items = items.filter(item => item.available > 0);
+    if (selectEl.name === "destination_location_id") { const sourceId = form?.querySelector('[name="source_inventory_id"]')?.value, source = array("inventory").find(item => item.id === sourceId); if (source) items = items.filter(item => item.warehouse_id === source.warehouse_id && item.id !== source.location_id); }
+    if (selectEl.dataset.source === "movements" && ["movement-dispatch-form","movement-receive-form","movement-release-form"].includes(form?.id)) items = items.filter(item => item.assignee_id === user?.id);
     selectEl.replaceChildren(); const placeholder = node("option",items.length ? t("choose") : t("noOptions")); placeholder.value = ""; selectEl.append(placeholder);
-    items.forEach(record => { const option = node("option",recordLabel(record)); option.value = record.id; selectEl.append(option); });
+    if (selectEl.multiple) selectEl.replaceChildren();
+    items.forEach(record => {
+      let label = recordLabel(record);
+      if (selectEl.dataset.source === "inventory") label = `${shortLookup("owners",record.owner_id)} · ${shortLookup("warehouses",record.warehouse_id)} · ${shortLookup("skus",record.sku_id)} · ${shortLookup("locations",record.location_id)} · ${t("available")}: ${record.available}`;
+      if (selectEl.dataset.source === "pick_tasks") label = `${shortLookup("waves",record.wave_id)} · #${record.sequence} · ${shortLookup("orders",record.order_id)} · ${shortLookup("locations",record.location_id)} · ${shortLookup("skus",record.sku_id)} · ${record.picked_qty}/${record.qty}`;
+      const option = node("option",label); option.value = record.id; if (selectEl.multiple) option.selected = selected.has(record.id); selectEl.append(option);
+    });
+    if (selectEl.multiple) return;
     if (items.some(item => item.id === previous)) selectEl.value = previous;
     else if (items.length === 1) selectEl.value = items[0].id;
   });
@@ -155,7 +178,7 @@ function populateSelects(root = document) {
 async function submitForm(form,schema) {
   if (!token) { message(t("needLogin"),true); return; }
   if (form.dataset.busy === "true") return;
-  const values = {}; schema.fields.forEach(spec => { const raw = form.elements.namedItem(spec.name).value; values[spec.name] = spec.type === "number" ? Number(raw) : raw.trim(); });
+  const values = {}; schema.fields.forEach(spec => { const control = form.elements.namedItem(spec.name), raw = control.value; values[spec.name] = spec.multiple ? [...control.selectedOptions].map(option => option.value) : spec.type === "number" ? Number(raw) : raw.trim(); });
   let path = schema.path; const body = {...values};
   const match = path.match(/:([a-z_]+)/); if (match) { path = path.replace(match[0],encodeURIComponent(values[match[1]])); delete body[match[1]]; }
   if (schema.lines) body.lines = [...form.querySelectorAll(".order-line")].map(row => ({sku_id:row.querySelector('[name="sku_id"]').value,qty:Number(row.querySelector('[name="qty"]').value)}));
@@ -172,10 +195,13 @@ async function submitForm(form,schema) {
   finally { form.dataset.busy = "false"; form.removeAttribute("aria-busy"); submit.disabled = false; submit.dataset.i18n = operation.uncertain ? "retryPending" : "submit"; submit.textContent = t(submit.dataset.i18n); form.querySelectorAll("input,select,button[type=button]").forEach(control => { control.disabled = operation.uncertain; }); }
 }
 function rowTimezone(record) { return array("warehouses").find(item => item.id === record.warehouse_id)?.timezone || "America/Sao_Paulo"; }
-function formatValue(key,value,record = {}) {
+function shortLookup(key,id) { const row = array(key).find(item => item.id === id); return row ? row.name || row.code || row.reference || row.id : id; }
+function formatValue(key,value,record = {},compact = false) {
   if (value === undefined || value === null || value === "") return "—";
-  const linked = {owner_id:"owners",warehouse_id:"warehouses",sku_id:"skus",location_id:"locations",store_id:"stores",order_id:"orders"};
-  if (linked[key]) return lookup(linked[key],value);
+  const linked = {owner_id:"owners",warehouse_id:"warehouses",sku_id:"skus",location_id:"locations",store_id:"stores",order_id:"orders",wave_id:"waves",source_location_id:"locations",destination_location_id:"locations"};
+  if (linked[key]) return compact ? shortLookup(linked[key],value) : lookup(linked[key],value);
+  if (key === "assignee_id" && value === user?.id) return user.name;
+  if (key === "kind") return t(value);
   if (key === "amount_cents") return new Intl.NumberFormat(language,{style:"currency",currency:"BRL"}).format(value / 100);
   if (key.endsWith("_at")) { const date = new Date(value); if (!Number.isNaN(date.getTime())) return new Intl.DateTimeFormat(language,{dateStyle:"short",timeStyle:"short",timeZone:rowTimezone(record)}).format(date); }
   if (typeof value === "object") return JSON.stringify(value);
@@ -186,7 +212,7 @@ function table(target,rows,columns) {
   if (!rows.length) { el.append(node("div",t("empty"),"empty")); return; }
   const wrap = node("div",undefined,"table-wrap"), tableEl = document.createElement("table"), head = document.createElement("thead"), header = document.createElement("tr");
   columns.forEach(key => { const th = node("th",t(key === "amount_cents" ? "amount" : key)); th.scope = "col"; header.append(th); }); head.append(header); tableEl.append(head);
-  const tbody = document.createElement("tbody"); rows.forEach(record => { const row = document.createElement("tr"); if (record.id) row.dataset.recordId = record.id; columns.forEach(key => { const cell = document.createElement("td"); if (key === "status") { cell.append(node("span",statusLabel(record[key] || "—"),`badge status${["CANCELLED","EXPECTED"].includes(record[key]) ? " pending" : ""}`)); } else { cell.textContent = formatValue(key,record[key],record); if (key === "id") cell.className = "id-cell"; if (key.endsWith("_at")) cell.title = rowTimezone(record); } cell.dataset.column = key; row.append(cell); }); tbody.append(row); }); tableEl.append(tbody); wrap.append(tableEl); el.append(wrap);
+  const tbody = document.createElement("tbody"); rows.forEach(record => { const row = document.createElement("tr"); if (record.id) row.dataset.recordId = record.id; columns.forEach(key => { const cell = document.createElement("td"); if (key === "status") { cell.append(node("span",statusLabel(record[key] || "—"),`badge status${["CANCELLED","EXPECTED"].includes(record[key]) ? " pending" : ""}`)); } else { cell.textContent = formatValue(key,record[key],record,["wave-records","task-records","movement-records"].includes(el.id)); if (key === "id") cell.className = "id-cell"; if (key.endsWith("_at")) cell.title = rowTimezone(record); } cell.dataset.column = key; row.append(cell); }); tbody.append(row); }); tableEl.append(tbody); wrap.append(tableEl); el.append(wrap);
 }
 function renderData() {
   if (!snapshot) return;
@@ -204,10 +230,13 @@ function renderData() {
   const orderColumns = ["reference","owner_id","warehouse_id","store_id","status","id"];
   table("#recent-orders",array("orders").slice(-5).reverse(),orderColumns);
   table("#order-records",array("orders").slice().reverse(),orderColumns);
+  table("#wave-records",array("waves"),["reference","owner_id","warehouse_id","status","created_at","id"]);
+  table("#task-records",array("pick_tasks"),["wave_id","sequence","location_id","sku_id","order_id","qty","picked_qty","status","assignee_id","id"]);
+  table("#movement-records",array("movements").slice().reverse(),["reference","kind","source_location_id","destination_location_id","sku_id","qty","status","assignee_id","id"]);
   table("#receipt-records",array("receipts").slice().reverse(),["reference","owner_id","warehouse_id","sku_id","qty","accepted_qty","rejected_qty","status","id"]);
-  table("#inventory-records",inventory,["owner_id","warehouse_id","sku_id","location_id","on_hand","reserved","picked","available"]);
-  table("#stock-quality-records",array("stock_summary"),["owner_id","warehouse_id","sku_id","on_hand","pending_qc","qualified_unstored","rejected","physical_total"]);
-  const ledgerCols = ["created_at","owner_id","warehouse_id","sku_id","location_id","event_type","on_hand_delta","reserved_delta","picked_delta","source_id","id"];
+  table("#inventory-records",inventory,["owner_id","warehouse_id","sku_id","location_id","on_hand","reserved","picked","move_reserved","available"]);
+  table("#stock-quality-records",array("stock_summary"),["owner_id","warehouse_id","sku_id","on_hand","move_reserved","in_transit","pending_qc","qualified_unstored","rejected","physical_total"]);
+  const ledgerCols = ["created_at","owner_id","warehouse_id","sku_id","location_id","event_type","on_hand_delta","reserved_delta","picked_delta","move_reserved_delta","in_transit_delta","source_id","id"];
   const ledgerRows = array("ledger").map(item => ({...item,event_type:item.event_type || item.type || item.kind,on_hand_delta:item.on_hand_delta ?? item.delta_on_hand ?? item.delta,reserved_delta:item.reserved_delta ?? item.delta_reserved,picked_delta:item.picked_delta ?? item.delta_picked,source_id:item.source_id || item.reference_id || item.event_id}));
   table("#ledger-records",ledgerRows.slice().reverse(),ledgerCols);
   const masterRecords = $("#master-records"); masterRecords.replaceChildren();
@@ -236,10 +265,13 @@ function renderIntegrations() {
   });
 }
 function renderRoadmap() {
-  const rows = [["coreScope","coreScopeHelp","implemented"],["extendedScope","extendedScopeHelp","implemented"],["efficiencyScope","efficiencyScopeHelp","unsupported"],["financeScope",null,"unsupported"],["advancedScope",null,"unsupported"],["devicesScope",null,"devicePending"],["productionScope","productionHelp","pendingAuthorization"]];
+  const rows = [["coreScope","coreScopeHelp","implemented"],["extendedScope","extendedScopeHelp","implemented"],["waveScope","waveHelp","implemented"],["moveScope","moveScopeHelp","implemented"],["efficiencyScope","efficiencyScopeHelp","unsupported"],["financeScope",null,"unsupported"],["advancedScope",null,"unsupported"],["devicesScope",null,"devicePending"],["productionScope","productionHelp","pendingAuthorization"]];
   $("#roadmap-records").replaceChildren(...rows.map(([title,help,status]) => { const row = node("div",undefined,"roadmap-row"), text = node("div"); text.append(node("strong",t(title))); if (help) text.append(node("p",t(help))); row.append(text,node("span",t(status),`badge${status === "implemented" ? "" : " warning"}`)); return row; }));
 }
 function logout() {
+  $('[data-view="waves"]').hidden = true; $('[data-view="movements"]').hidden = true;
+  ["#wave-records","#task-records","#movement-records"].forEach(selector => $(selector).replaceChildren());
+  showView("overview");
   sessionVersion++; token = ""; user = null; snapshot = null; lastRefreshed = null; $("#api-token").value = ""; $("#connected-content").hidden = true; $("#login-panel").hidden = false; $("#logout").hidden = true; $("#identity").textContent = t("disconnected"); $("#refresh").disabled = true;
   document.querySelectorAll(".form-result").forEach(el => { el.textContent = ""; delete el.dataset.recordId; delete el.dataset.recordStatus; });
   document.querySelectorAll(".business-form").forEach(form => { submissions.delete(form); form.reset(); form.querySelectorAll("input,select,button").forEach(control => { control.disabled = false; }); const submit = form.querySelector('[type="submit"]'); submit.dataset.i18n = "submit"; submit.textContent = t("submit"); });
@@ -249,7 +281,7 @@ function logout() {
 }
 buildForms(); translate();
 document.addEventListener("click",event => { const view = event.target.closest("[data-view],[data-go]"); if (view) showView(view.dataset.view || view.dataset.go); const mode = event.target.closest("[data-mode]"); if (mode) { document.querySelectorAll("[data-mode]").forEach(el => el.classList.toggle("active",el === mode)); showView(mode.dataset.mode === "pda" ? "pda" : mode.dataset.mode === "oms" ? "orders" : "overview"); } });
-document.addEventListener("change",event => { if (["owner_id","warehouse_id"].includes(event.target.name) && snapshot) populateSelects(event.target.closest("form")); });
+document.addEventListener("change",event => { if (["owner_id","warehouse_id","source_inventory_id"].includes(event.target.name) && snapshot) populateSelects(event.target.closest("form")); });
 $("#language").addEventListener("change",event => { language = event.target.value; translate(); });
 $("#logout").addEventListener("click",logout);
 $("#refresh").addEventListener("click",async () => { try { await refresh(); $("#notice").hidden = true; } catch (error) { message(error.message,true); } });
@@ -258,7 +290,9 @@ $("#login-form").addEventListener("submit",async event => {
   try {
     const me = await api("/api/me",undefined,undefined,candidate); token = candidate; user = me; $("#api-token").value = "";
     await refresh(); $("#login-panel").hidden = true; $("#connected-content").hidden = false; $("#logout").hidden = false; $("#identity").textContent = `${user.name} · ${user.role}`; $("#notice").hidden = true;
-    if (user.role === "owner") { document.querySelectorAll("[data-mode]").forEach(el => el.classList.toggle("active",el.dataset.mode === "oms")); showView("orders"); }
+    const preferredMode = user.role.startsWith("owner") ? "oms" : "wms";
+    document.querySelectorAll("[data-mode]").forEach(el => el.classList.toggle("active",el.dataset.mode === preferredMode));
+    if (preferredMode === "oms") showView("orders");
   } catch (error) { token = ""; user = null; snapshot = null; $("#refresh").disabled = true; message(error.message,true); }
   finally { button.disabled = false; button.textContent = t("connect"); }
 });

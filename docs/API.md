@@ -23,3 +23,14 @@
 ## 服务容量与日志
 
 请求 body 上限 256KiB；单节点认证失败 30/分钟（进程内按直接连接 IP），生产须网关限流，反代下此计数可能共享同一入口IP。快照当前返回全部授权记录，分页/时间筛选后续实现，大数据量不适用；小样本测试不等于生产容量。禁用 uvicorn access log，应用仅记 status/duration；部署人员不得启用请求头/正文记录。
+
+## 0.3库内作业补充（本节覆盖旧阶段1限制）
+
+已支持波次/独立拣货任务和同仓人工补货/移位，仍不支持部分发货、多包裹、盘点、跨仓调拨和实体回位取消。完整body/角色/状态见CONTRACT。
+
+- 管理员/staff选择同货主同仓已预占订单建波次；picker领取任务后按订单容器逐单扫码，COMPLETED仅拣货完成，仍需原逐单verify/pack/ship。活动波次不能通过旧pick绕过。
+- POST `/api/movements {source_inventory_id,destination_location_id,kind,reference,qty}`，kind为MOVE或REPLENISHMENT。任务创建锁定来源可用数量。claim领取、dispatch来源实际搬出、receive目标实际到位；dispatch/receive body均为{barcode,location_id,qty}，必须整任务数量。
+- move_reserved独立于订单reserved；available=on_hand−reserved−move_reserved。库内搬运中in_transit不可销售，仍计入physical_total。release只释放领取，cancel才在搬出前释放数量锁；搬出后不能直接取消。
+- 仓内任务数据不对货主等非作业角色开放，库存数量汇总仍准确包含自身搬运中实物。错误扫描、状态冲突、权限不足和未知响应均由服务端处理；若响应未知，保留原body/path/key重试。
+
+旧文中“available=on_hand-reserved”仅适用于无搬运锁的阶段1数据，当前口径以上式为准；本轮迁移003给旧记录新增字段默认0。

@@ -1,7 +1,7 @@
 services:
   wms:
     build: .
-    image: overseas-wms:0.1.0
+    image: overseas-wms:0.3.0
     ports:
       - "127.0.0.1:${WMS_PORT:-8000}:8000"
     environment:

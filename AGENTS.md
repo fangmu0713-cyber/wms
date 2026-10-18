@@ -12,3 +12,6 @@ Tests: `python -m unittest discover -s tests -v`. Browser instructions in tests 
 
 ## Invariants and safety
 Do not edit stock directly. Each write uses BEGIN IMMEDIATE transaction, idempotency record, audit and stock ledger as applicable. Never decrement stock for reserve/pick/pack; ship once. Scope every query by tenant and owner/warehouse access. No unauthenticated seed data, no default passwords, no business localStorage. Never log/store raw tokens except protected credential export, no secrets in screenshots. Use test-only temp databases. Do not touch VPS, SSH or running external services. Keep unresolved scope explicit in status/handoff.
+
+## Current warehouse increments
+Migrations 001/002/003 are published contracts; continue with 004. available=on_hand-reserved-move_reserved. Same-warehouse IN_TRANSIT is physical custody, not sellable inventory or cross-warehouse transfer. Never cancel dispatched movement directly or bypass active wave tasks. Browser acceptance: `python -m tests.browser_warehouse -v`; preserve historical evidence with `WMS_EVIDENCE_DIR=evidence/stage3/legacy python -m tests.browser_flow -v`.

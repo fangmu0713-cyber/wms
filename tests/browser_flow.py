@@ -40,8 +40,8 @@ class BrowserBusinessFlow(unittest.TestCase):
             while not server.started and time.monotonic() < deadline:
                 time.sleep(0.05)
             self.assertTrue(server.started, "Local test HTTP server did not start")
-            evidence = Path(__file__).resolve().parents[1] / "evidence"
-            evidence.mkdir(exist_ok=True)
+            evidence = Path(os.environ.get('WMS_EVIDENCE_DIR') or Path(__file__).resolve().parents[1] / "evidence")
+            evidence.mkdir(parents=True,exist_ok=True)
             checks = []
             try:
                 with httpx.Client(base_url=base_url, headers={"Authorization": "Bearer " + account["token"]}) as api, sync_playwright() as playwright:

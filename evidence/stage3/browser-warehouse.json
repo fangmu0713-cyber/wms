@@ -1,0 +1,49 @@
+{
+  "environment": "isolated SQLite; synthetic data; real HTTP/browser",
+  "movement": {
+    "qty": 40,
+    "after_hold": {
+      "on_hand": 100,
+      "move_reserved": 40,
+      "available": 60,
+      "physical_total": 100
+    },
+    "after_dispatch": {
+      "on_hand": 60,
+      "in_transit": 40,
+      "physical_total": 100
+    },
+    "after_receive": {
+      "on_hand": 100,
+      "in_transit": 0,
+      "physical_total": 100
+    }
+  },
+  "committed_receive_response_loss": "same-key retry; one destination credit",
+  "pre_dispatch_cancel_tested": true,
+  "owner_task_ui_hidden": true,
+  "wave_orders": 2,
+  "wave_picked": 5,
+  "after_shipping": {
+    "on_hand": 95,
+    "reserved": 0,
+    "picked": 0,
+    "move_reserved": 0,
+    "in_transit": 0
+  },
+  "reconciliation": {
+    "ok": true,
+    "issues": []
+  },
+  "languages": [
+    "zh-CN",
+    "pt-BR"
+  ],
+  "viewports": [
+    "1440x1000",
+    "390x844"
+  ],
+  "javascript_errors": [],
+  "physical_devices_tested": false,
+  "erp_connected": false
+}

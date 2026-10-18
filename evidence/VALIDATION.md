@@ -1,3 +1,37 @@
+# 0.3：波次恢复与同仓人工补货/移位验收
+
+本轮从原上传的阶段1bundle恢复a2681d4；上轮a0a955d和生成包不在当前云环境，波次按聊天记录重建并复验，不能声称找回旧提交。先通过阶段1原21项（1.742s）、重建波次后31项（3.433s），再实现003。对应baseline-tests.txt和restored-wave-tests.txt在stage3目录。
+
+|命令|本轮最终结果|证据（evidence/stage3）|
+|---|---|---|
+|`python -m unittest discover -s tests -v`|44项全通过，5.643s|api-tests.txt|
+|`python -m tests.browser_warehouse -v`|1项真实浏览器流程通过，7.014s|warehouse-browser-tests.txt、browser-warehouse.json、movement-*.png、waves-pt-mobile.png|
+|`WMS_EVIDENCE_DIR=evidence/stage3/legacy python -m tests.browser_flow -v`|原履约闭环/响应丢失/BRL/中葡桌面手机回归通过，5.690s|legacy-browser-tests.txt、legacy目录截图与JSON|
+|`node --check app/static/app.js`、`node --check app/static/warehouse-config.js`|通过|最终工具exit0|
+|`python -m compileall -q app tests scripts`、`git diff --check`|通过|最终工具exit0|
+
+44项=原21项+重建波次10项+本轮搬运13项。测试均独立临时SQLite真实API；无mock ERP/假成功。部分命令并行，时长不是生产性能。socket测试需工具network.enabled=true支持本机套接字。
+
+## 本轮关键证据
+
+- 100件、订单波次预占3件，再锁搬运40：on_hand100/reserved3/move_reserved40/available57；搬出后库位60+搬运中40，仍保管100。波次任务可拣原预占3，不受空闲数量搬运影响。接收后库位100，实际交接3后97，账本一致。
+- 浏览器40件补货：锁后可用60，搬出后库位60+搬运中40=100，到位后库存100；再两单波次发5件后95。手工MOVE任务5件未搬出取消释放锁。
+- 订单预占与搬运锁并发抢最后1件最多一个成功；两个搬运锁抢末件、两个接收请求也最多一个新键成功。
+- 创建/搬出/接收各同键重复10次仍只有一次业务记录；实物流水一对−40/+40，待搬锁和搬运中变化各自守恒。浏览器目标已入账但响应被丢弃，原键重试不再增加目标库存。
+- 错码、错源/目标、非整任务数量、越序、他人领取操作被拒；已搬出不可取消/释放/重新领取；未搬出取消才释放数量，release仅释放领取。
+- 目标接收阶段注入真实数据库写失败，目标库存新行、流水、状态、幂等均回滚；去掉故障后相同key恢复成功。
+- 跨租户/未授权仓访问、货主/只读/打包/财务角色读写任务被拒；货主自己库存汇总仍显示搬运中数量。不同货主同SKU字符串不串账。
+- 真正只含001/002的旧库（有部分已拣波次）升级003，snapshot、已有流水与任务保持，新增字段默认0；缺003健康503，迁移后200，重复迁移和外键/integrity通过。
+- IN_TRANSIT时SQLite独立备份恢复，完整snapshot相等；恢复库接收完成不改变源库的搬运中状态。原恢复测试本轮输出另存recovery.json，根目录阶段1文件保持历史版本。
+- 中文1440×1000、pt-BR手机390×844、无页面横向溢出（明细表独立滚动）、JS错误0、浏览器业务/令牌不写localStorage/sessionStorage、货主无仓内任务导航。
+- 登录后早期导航时序回归曾发现页面被切回总览，已修复并重跑两套浏览器；最后表格仅列通过的最终运行。
+
+本轮未重建0.3容器、运行长期负载、真实ERP、实物设备或生产部署。自动补货规则、盘点、跨仓调拨、部分搬运/损耗/回位等未完成。001字节保持原a2681d4版本；002按上轮契约重建，003增量迁移，无down。
+
+下方保留阶段1历史验收；这些容器/探针结果不代表0.3已完成相同验收。
+
+---
+
 # 阶段 1 验收证据
 
 执行日 2026-10-16（Asia/Shanghai）；所有客户、货主、SKU、运单、订单均为独立测试库内的合成数据。真实 HTTP/数据库操作，未使用 ERP 模拟成功接口。

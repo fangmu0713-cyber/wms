@@ -7,6 +7,7 @@
   <meta name="theme-color" content="#163d35">
   <title>Atlas · 海外仓作业台</title>
   <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/warehouse-config.js" defer></script>
   <script src="/static/app.js" defer></script>
 </head>
 <body>
@@ -19,6 +20,8 @@
       <button class="nav-item" data-view="masters"><span aria-hidden="true">▦</span><span data-i18n="masters">基础资料</span></button>
       <button class="nav-item" data-view="inbound"><span aria-hidden="true">↙</span><span data-i18n="inbound">收货与上架</span></button>
       <button class="nav-item" data-view="orders"><span aria-hidden="true">▤</span><span data-i18n="orders">订单管理</span></button>
+      <button class="nav-item" data-view="waves" hidden><span aria-hidden="true">≋</span><span data-i18n="waves">波次与拣货任务</span></button>
+      <button class="nav-item" data-view="movements" hidden><span aria-hidden="true">⇢</span><span data-i18n="movements">补货与移位</span></button>
       <button class="nav-item" data-view="pda"><span aria-hidden="true">⌗</span><span data-i18n="pda">PDA 扫码作业</span></button>
       <button class="nav-item" data-view="inventory"><span aria-hidden="true">▥</span><span data-i18n="inventory">库存与流水</span></button>
       <button class="nav-item" data-view="returns"><span aria-hidden="true">↶</span><span data-i18n="returns">退货处理</span></button>
@@ -44,6 +47,9 @@
         <form id="login-form"><label for="api-token" data-i18n="accessToken">访问令牌</label><input id="api-token" name="token" type="password" required autocomplete="off" spellcheck="false" placeholder="Bearer token"><button class="button" type="submit" data-i18n="connect">连接工作空间</button></form>
       </section>
       <div id="connected-content" hidden>
+        <section data-panel="waves" hidden><div class="section-note" data-i18n="waveHelp"></div><div id="wave-forms" class="forms-grid"></div><article class="card"><h2 data-i18n="waves"></h2><div id="wave-records"></div></article><article class="card"><h2 data-i18n="pickTasks"></h2><div id="task-records"></div></article></section>
+        <section data-panel="movements" hidden><div class="section-note" data-i18n="movementHelp"></div><div id="movement-forms" class="forms-grid"></div><article class="card"><h2 data-i18n="movementRecords"></h2><div id="movement-records"></div></article></section>
+
         <section data-panel="overview">
           <div class="hero"><div><span class="section-kicker" data-i18n="today">此刻 · 实时业务</span><h2 data-i18n="heroTitle">货物流转，清晰有序。</h2><p data-i18n="heroText">收货、预占、拣货、复核与出库使用独立状态，库存以实际交接为准。</p><button class="button light" data-go="inbound" data-i18n="startReceiving">开始收货 ↗</button></div><div class="hero-symbol" aria-hidden="true"><div class="box box-one"></div><div class="box box-two"></div><div class="box box-three"></div><span>IN → OUT</span></div></div>
           <div class="metrics" id="metrics"></div>

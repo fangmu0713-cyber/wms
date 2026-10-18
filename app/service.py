@@ -56,17 +56,20 @@ def same_owner(obj, owner_id):
         fail('resource_owner_mismatch',422)
 
 
-def stock(db, actor, key, inventory, source, event, on_hand=0, reserved=0, picked=0):
-    changed = db.execute('''UPDATE inventory SET on_hand=on_hand+?,reserved=reserved+?,picked=picked+?
+def stock(db, actor, key, inventory, source, event, on_hand=0, reserved=0, picked=0, move_reserved=0, in_transit=0):
+    changed = db.execute('''UPDATE inventory SET on_hand=on_hand+?,reserved=reserved+?,picked=picked+?,move_reserved=move_reserved+?
         WHERE id=? AND tenant_id=? AND on_hand+?>=0 AND reserved+?>=0
-        AND reserved+?<=on_hand+? AND picked+?>=0 AND picked+?<=reserved+?''',
-        (on_hand,reserved,picked,inventory['id'],actor['tenant_id'],on_hand,reserved,reserved,on_hand,picked,picked,reserved)).rowcount
+        AND move_reserved+?>=0 AND reserved+?+move_reserved+?<=on_hand+?
+        AND picked+?>=0 AND picked+?<=reserved+?''',
+        (on_hand,reserved,picked,move_reserved,inventory['id'],actor['tenant_id'],on_hand,reserved,
+         move_reserved,reserved,move_reserved,on_hand,picked,picked,reserved)).rowcount
     if changed != 1:
         fail('insufficient_or_inconsistent_stock')
     insert(db,'ledger',{'tenant_id':actor['tenant_id'],
         **{k:inventory[k] for k in ('owner_id','warehouse_id','sku_id','location_id')},
         'inventory_id':inventory['id'],'event_type':event,'source_id':source,
         'on_hand_delta':on_hand,'reserved_delta':reserved,'picked_delta':picked,
+        'move_reserved_delta':move_reserved,'in_transit_delta':in_transit,
         'actor_id':actor['id'],'idempotency_key':key,'created_at':now()})
 
 
@@ -150,7 +153,7 @@ def lines(db, order_id):
     return [dict(r) for r in db.execute('SELECT * FROM order_lines WHERE order_id=? ORDER BY id',(order_id,))]
 
 
-def order_action(db, actor, key, object_id, action, data):
+def order_action(db, actor, key, object_id, action, data, task_id=None):
     roles = {'reserve':('staff','owner'),'cancel':('staff','owner'),'pick':('staff','picker'),
              'verify':('staff','packer'),'pack':('staff','packer'),'ship':('staff','packer')}
     permit(actor,*roles[action])
@@ -163,10 +166,10 @@ def order_action(db, actor, key, object_id, action, data):
             fail('reserve_requires_created_order')
         for line in order_lines:
             remaining = line['qty']
-            rows = db.execute('''SELECT * FROM inventory WHERE tenant_id=? AND owner_id=? AND warehouse_id=? AND sku_id=? AND on_hand>reserved ORDER BY location_id''',
+            rows = db.execute('''SELECT * FROM inventory WHERE tenant_id=? AND owner_id=? AND warehouse_id=? AND sku_id=? AND on_hand>reserved+move_reserved ORDER BY location_id''',
                 (actor['tenant_id'],order['owner_id'],order['warehouse_id'],line['sku_id'])).fetchall()
             for inv in rows:
-                qty = min(remaining,inv['on_hand']-inv['reserved'])
+                qty = min(remaining,inv['on_hand']-inv['reserved']-inv['move_reserved'])
                 if not qty:
                     continue
                 stock(db,actor,key,inv,object_id,'RESERVE',reserved=qty)
@@ -180,11 +183,16 @@ def order_action(db, actor, key, object_id, action, data):
     elif action == 'pick':
         if status not in ('RESERVED','PICKING'):
             fail('pick_requires_reserved_order')
+        membership = db.execute('SELECT 1 FROM wave_orders WHERE order_id=? AND active=1', (object_id,)).fetchone()
+        if membership and task_id is None:
+            fail('pick_via_wave_task_required')
         allocations = db.execute('''SELECT a.*,i.owner_id,i.warehouse_id,i.sku_id,i.location_id FROM allocations a JOIN inventory i ON i.id=a.inventory_id JOIN skus s ON s.id=i.sku_id
             WHERE a.order_id=? AND a.status='ACTIVE' AND s.barcode=? AND i.location_id=?''', (object_id,data['barcode'],data['location_id'])).fetchall()
         if len(allocations)!=1 or data['qty'] > allocations[0]['qty'] - allocations[0]['picked_qty']:
             fail('wrong_barcode_location_or_excess_pick')
         allocation = dict(allocations[0])
+        if task_id and not db.execute('SELECT 1 FROM pick_tasks WHERE id=? AND allocation_id=?', (task_id,allocation['id'])).fetchone():
+            fail('task_allocation_mismatch')
         inv = get(db,actor,'inventory',allocation['inventory_id'])
         stock(db,actor,key,inv,object_id,'PICK',picked=data['qty'])
         db.execute('UPDATE allocations SET picked_qty=picked_qty+? WHERE id=?',(data['qty'],allocation['id']))
@@ -215,6 +223,8 @@ def order_action(db, actor, key, object_id, action, data):
     elif action == 'cancel':
         if status not in ('CREATED','RESERVED'):
             fail('cancel_requires_unpicked_order_physical_return_required')
+        from .waves import cancel_order_tasks
+        cancel_order_tasks(db,object_id)
         for allocation in db.execute("SELECT * FROM allocations WHERE order_id=? AND status='ACTIVE'",(object_id,)).fetchall():
             inv = get(db,actor,'inventory',allocation['inventory_id'])
             stock(db,actor,key,inv,object_id,'CANCEL_RELEASE',reserved=-allocation['qty'])
@@ -256,27 +266,38 @@ def snapshot(db, actor):
     order_ids = {r['id'] for r in result['orders']}
     result['order_lines'] = [dict(r) for r in db.execute('SELECT * FROM order_lines WHERE tenant_id=?',(actor['tenant_id'],)) if r['order_id'] in order_ids]
     result['allocations'] = [dict(r) for r in db.execute('SELECT * FROM allocations WHERE tenant_id=?',(actor['tenant_id'],)) if r['order_id'] in order_ids]
+    result['waves'], result['pick_tasks'], result['wave_orders'] = [], [], []
+    if actor['role'] in ('admin','staff','picker'):
+        result['waves'] = [dict(r) for r in db.execute('SELECT * FROM waves WHERE tenant_id=? ORDER BY created_at,id',(actor['tenant_id'],)) if visible(db,actor,r)]
+        wave_ids = {r['id'] for r in result['waves']}
+        result['pick_tasks'] = [dict(r) for r in db.execute('SELECT * FROM pick_tasks WHERE tenant_id=? ORDER BY wave_id,sequence',(actor['tenant_id'],)) if r['wave_id'] in wave_ids and visible(db,actor,r)]
+        result['wave_orders'] = [dict(r) for r in db.execute('SELECT wo.* FROM wave_orders wo JOIN waves w ON w.id=wo.wave_id WHERE w.tenant_id=?',(actor['tenant_id'],)) if r['wave_id'] in wave_ids]
+    movements = [dict(r) for r in db.execute('SELECT * FROM movements WHERE tenant_id=? ORDER BY created_at,id',(actor['tenant_id'],)) if visible(db,actor,r)]
+    result['movements'] = movements if actor['role'] in ('admin','staff','picker','receiver') else []
     for inv in result['inventory']:
-        inv['available'] = inv['on_hand'] - inv['reserved']
-    result['reconciliation'] = reconcile(result)
-    result['stock_summary'] = quality_summary(result)
+        inv['available'] = inv['on_hand'] - inv['reserved'] - inv['move_reserved']
+    result['reconciliation'] = reconcile(result,movements)
+    result['stock_summary'] = quality_summary(result,movements)
     return result
 
 
-def quality_summary(snapshot):
+def quality_summary(snapshot, movements=()):
     """Physical custody includes uninspected and rejected goods, never allocatable."""
     groups = {}
     def group(row):
         key = tuple(row[k] for k in ('owner_id','warehouse_id','sku_id'))
         if key not in groups:
             groups[key] = {k:row[k] for k in ('owner_id','warehouse_id','sku_id')} | {
-                'on_hand':0,'reserved':0,'picked':0,'available':0,
+                'on_hand':0,'reserved':0,'picked':0,'move_reserved':0,'available':0,'in_transit':0,
                 'pending_qc':0,'qualified_unstored':0,'rejected':0,'physical_total':0}
         return groups[key]
     for row in snapshot['inventory']:
         summary = group(row)
-        for k in ('on_hand','reserved','picked','available'):
+        for k in ('on_hand','reserved','picked','move_reserved','available'):
             summary[k] += row[k]
+    for movement in movements:
+        if movement['status']=='IN_TRANSIT':
+            group(movement)['in_transit'] += movement['qty']
     for row in snapshot['receipts'] + snapshot['returns']:
         if row['status']=='EXPECTED':
             continue  # A notice is not physical receipt.
@@ -288,26 +309,37 @@ def quality_summary(snapshot):
             if row['status']=='QC_DONE':
                 summary['qualified_unstored'] += row['accepted_qty']
     for summary in groups.values():
-        summary['physical_total'] = summary['on_hand']+summary['pending_qc']+summary['qualified_unstored']+summary['rejected']
+        summary['physical_total'] = summary['on_hand']+summary['in_transit']+summary['pending_qc']+summary['qualified_unstored']+summary['rejected']
     return list(groups.values())
 
 
-def reconcile(snapshot):
+def reconcile(snapshot, movements=()):
     issues = []
     sums = {}
     allocations = {}
+    movement_holds, transit = {}, {}
+    for movement in movements:
+        if movement['status'] in ('PLANNED','CLAIMED'):
+            movement_holds[movement['source_inventory_id']] = movement_holds.get(movement['source_inventory_id'],0)+movement['qty']
     for entry in snapshot['ledger']:
-        values = sums.setdefault(entry['inventory_id'],[0,0,0])
-        for i,k in enumerate(('on_hand_delta','reserved_delta','picked_delta')):
+        values = sums.setdefault(entry['inventory_id'],[0,0,0,0])
+        for i,k in enumerate(('on_hand_delta','reserved_delta','picked_delta','move_reserved_delta')):
             values[i] += entry[k]
+        transit[entry['source_id']] = transit.get(entry['source_id'],0)+entry['in_transit_delta']
     for entry in snapshot['allocations']:
         if entry['status']=='ACTIVE':
             values = allocations.setdefault(entry['inventory_id'],[0,0])
             values[0] += entry['qty']
             values[1] += entry['picked_qty']
     for inv in snapshot['inventory']:
-        if [inv['on_hand'],inv['reserved'],inv['picked']] != sums.get(inv['id'],[0,0,0]):
+        if [inv['on_hand'],inv['reserved'],inv['picked'],inv['move_reserved']] != sums.get(inv['id'],[0,0,0,0]):
             issues.append({'inventory_id':inv['id'],'reason':'ledger_balance_mismatch'})
         if [inv['reserved'],inv['picked']] != allocations.get(inv['id'],[0,0]):
             issues.append({'inventory_id':inv['id'],'reason':'allocation_balance_mismatch'})
+        if inv['move_reserved'] != movement_holds.get(inv['id'],0):
+            issues.append({'inventory_id':inv['id'],'reason':'movement_hold_mismatch'})
+    for movement in movements:
+        expected = movement['qty'] if movement['status']=='IN_TRANSIT' else 0
+        if transit.get(movement['id'],0) != expected:
+            issues.append({'sku_id':movement['sku_id'],'reason':'movement_transit_mismatch'})
     return {'ok':not issues,'issues':issues}
