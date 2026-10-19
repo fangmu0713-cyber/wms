@@ -1,49 +1,47 @@
-# HANDOFF — 0.4盘点续接
+# HANDOFF — 0.5跨仓与本地试用
 
-持久分支`codex/wms-warehouse-movements`，草稿PR：https://github.com/fangmu0713-cyber/wms/pull/1 。本轮从63fb8df同步继续；准确最新SHA见git log及远程。不要仅检出main初始README或旧源码包重新开发。
+持久分支`codex/wms-warehouse-movements`，草稿PR：https://github.com/fangmu0713-cyber/wms/pull/1 。本轮从远程/本地8238f17的0.4续接；准确最新SHA见git log和远程。不要仅检出main初始README或旧包重新开发。用户要进一步完善后晚些本地试用，已准备隔离入口，不立即部署公网。
 
-## 当前交付
+## 当前交付与守恒
 
-0.4.0 = 真实履约 + 002波次/独立拣货 + 003同仓人工补货/移位 + 004截点盘点/盲盘/独立复盘/差异审批。001/002/003未改，下一迁移005。
+0.5.0包含已有履约/波次/同仓搬运/盲盘和005跨仓调拨。001–005发布后不改，下一迁移006。
 
-盘点为单货主/单仓/单SKU明确库位集合。测量开始要求无订单/已拣/搬运占用，同事务记录当前on_hand与ledger rowid，持久锁定所选库存；其他库存可继续。读数提交释放测量锁，短少数量另锁count_reserved。最近两次不同账号的差额一致才接受非零差异；复盘重新取当前截点，不能直接比较不同时间的总读数。审批只增减差额，不覆盖当前余额。
+调拨单单货主/单SKU/单源库位。主管两仓授权建单，来源move_reserved+qty，不能与订单/其他搬运/盘点锁抢同一数量。源仓picker/staff整单扫码发出，源on_hand/hold−qty、transfer_transit+qty。目标仓receiver/staff凭唯一receipt_reference分批合格接收，可不同库位，目标on_hand+qty、transfer_transit−qty。只需各自作业端仓授权，不能因此读另一仓余额。只有admin可根据确认丢失依据/原因以全部剩余量结案，transfer_lost+qty，不伪造目标库存。
 
-专用count_only凭证只能是CLI明确签发的picker，旧用户默认0。认证、GET、snapshot和幂等响应均执行限制，不给账面/截点/差额或他人读数。admin/staff建单、分配复盘、取消；只有admin可审批，需原因。服务器只证明不同账号，现实人员独立性由现场管理保证。
+TRANSFER_PLANNED→DISPATCHED→PART_RECEIVED→COMPLETED，或途中CLOSED_WITH_LOSS；仅发出前可CANCELLED。不可改删transfer_events；每单/RECEIVE/reference唯一。重试原body/path/key，缓存重放也重查当前角色/端仓授权，不能换人/键重复登记同批。找回/退回/残次接收/丢失撤销/赔付待后续，不要直接取消已发出单。
 
-测量锁期间inventory.count_locked=true/available=0；否则available=on_hand−reserved−move_reserved−count_reserved。所有库存写经service.stock检查测量锁，COUNT_HOLD/CANCEL仅内部可针对本行放行。取消释放锁并保留证据，不解决实物差异。读数和截点不能改删。
+原in_transit仅同仓，跨仓transfer_in_transit按源仓归集一次；physical_total=库位on_hand+两类在途+待检/合格未上架/残次，确认丢失不在实物内。内部核对读取可见调拨两端流水，不给调用者未授权仓账本。move_reserved核对包含同仓待搬+跨仓待发；恢复检查所有事件和锁，不能只迁目标余额。
 
-## 启动与可复验命令
+盘点每轮锁测量并记当前账面/ledger rowid；提交后放测量锁，短少按最大值另锁count_reserved。不同账号相同差额才接受非零差异；admin批准增减当前余额的delta，不覆盖历史总数。count_only仅可读取/提交自身盲盘任务，API/snapshot/幂等响应不给账面/截点/差额/他人读数。跨仓收货仍遵守目标测量锁，源测量不阻断其他库位接收；丢失结案账本锚源库存，须等待源测量结束。不同账号不验证现实不同人员。
+
+## 本地试用与复验
+
+安装与逐步演练见docs/LOCAL_TRIAL.md。执行`python -m scripts.local_trial`只在127.0.0.1:8000运行，显式建立独立var/local-trial示例库和五个岗位，原业务WMS_DB_PATH不读取，不覆盖未知目录。凭证只存本机0600 accounts.token，不打印/截图/进源码包；Windows另管ACL。重启保留数据，另用--directory开始一轮；不会静默重发过期凭证。
 
 ```bash
 python -m pip install -r requirements.lock
 python -m pip install -r requirements-test.txt
-python -m app.cli migrate
-python -m app.cli bootstrap --tenant '测试公司' --name '管理员'
-python -m app.cli user --tenant-id TENANT_ID --name '初盘员' --role picker --count-only --warehouse-id WAREHOUSE_ID --output var/counter-a.token
-python -m app.cli user --tenant-id TENANT_ID --name '复盘员' --role picker --count-only --warehouse-id WAREHOUSE_ID --output var/counter-b.token
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log
 python -m unittest discover -s tests -v
-python -m tests.browser_counts -v
-WMS_WAREHOUSE_EVIDENCE_DIR=evidence/stage4/warehouse python -m tests.browser_warehouse -v
-WMS_EVIDENCE_DIR=evidence/stage4/legacy python -m tests.browser_flow -v
+python -m tests.browser_transfers -v
+WMS_COUNT_EVIDENCE_DIR=evidence/stage5/counts python -m tests.browser_counts -v
+WMS_WAREHOUSE_EVIDENCE_DIR=evidence/stage5/warehouse python -m tests.browser_warehouse -v
+WMS_EVIDENCE_DIR=evidence/stage5/legacy python -m tests.browser_flow -v
 ```
 
-签发凭证只写0600文件，不能发聊天/截图/进包。当前云环境TestClient/Chromium需要工具network.enabled=true支持本机socket。测试均独立临时库，命令无需ERP凭证。无新依赖。
+云环境本机socket需工具network.enabled=true。86项后端+4套真实浏览器通过，测试使用独立临时SQLite/示例账号，无新依赖，无ERP密钥。原64项先作基线再继续。包括19项调拨、3项本地入口、权限撤回后缓存防泄露、超收/末件/收货与丢失并发、失败回滚、旧004真实流水增量升级、恢复后继续收货和元数据破坏拒绝。
 
-64项后端+3套真实浏览器通过；结果/截图见evidence/stage4和VALIDATION。覆盖盘点期间出库/上架/搬运、并发预占/审批、盲盘API与缓存响应隔离、独立复盘、差异锁防超占、多行失败回滚、003升级、持久锁/读数/短少锁的独立恢复和错误元数据拒绝。典型100→实盘98→发3→复盘95（账97）→再发5→审批差额−2→90，核对通过。
+典型浏览器：100，调出20（源80/在途20），目标收7+8，再确认剩余5丢失，最后源80/目标15/在途0/历史丢失5；实际收货与丢失结案响应丢失后原键只过一次。0JS错误、中葡桌面/手机、空localStorage/sessionStorage。截图/日志在stage5，历史stage3/4证据保留；旧测试会写根evidence/recovery.json，本轮归档到stage5再恢复根历史文件。
 
-## 继续顺序
+## 接下来
 
-1. 先读AGENTS/PROJECT_STATUS/TASK_BOARD/DECISIONS/CONTRACT及总任务书，核对git、远程和证据；从005迁移继续，不改001–004。
-2. 做跨仓调拨的发出/在途/部分接收/丢损，先明确同一货主与两仓授权、库存口径、唯一事件和守恒。不能把同仓IN_TRANSIT当作跨仓已完成。
-3. 作业异常/实体回位/换人交接，多包裹与部分履约先扩行过账；随后完整OMS/ASN/异常/私有附件/导出、报价/账单等。
-4. 全仓多SKU自动盘点、未知商品认领、货主盘点门户、自动补货、部分搬运/损耗/回位等未实现，当前不能计入完成。
-5. 真实ERP需正式协议/账号/接口权限，先只读再沙箱；P5仍需认证加强、CLI管理审计、分页、长期负载、监控、实机和库存切换。
+1. 用户晚些本地试用后收集岗位/页面/实际步骤/预期与实得/截图（不含令牌），优先改真实反馈，不强迫先完成所有高级模块。
+2. 实体回位/作业换人、调拨退回/找回/残次区域、多SKU调拨和部分发出。多包裹/部分销售出库先扩行模型，不破坏旧整单链。
+3. 完整OMS/ASN/导入导出/异常/私有附件/正式计费；自动补货/全仓多SKU盘点计划/箱托组合装尚未实现。
+4. 真实ERP须正式账号/接口协议/权限，从只读和沙箱开始；五家目前disabled/pending，没有HTTP业务对接。
+5. 正式生产前需认证加强、CLI审计、分页、负载/监控、实机及库存切换验收；持久离线队列也未实现。
 
-## 运维限制
+## 运维边界
 
-0.4镜像标签已更新，本轮未重新构建容器或生产部署；旧0.1容器/探针为历史证据。缺004健康与认证503。新旧版本安全边界不同：0.3不认识count_only，会把专用盘点账号当普通picker；也不检查测量锁/短少锁，禁止直接回退。停写并保留所有新流水，撤销专用凭证、人工对账或前向修复，无破坏性down。
+0.5镜像标签更新，本轮未构建验收容器/长期压测；旧0.1容器/容量探针仅历史证据。Windows/macOS步骤未在这些实机上验收。无生产服务器/域名授权或公网网址，未动VPS/SSH/安全组/外部运行服务。只更新原草稿PR，不合并或部署。
 
-备份恢复工具检查所有库存锁的ledger投影、count_lines短少锁和ACTIVE任务测量锁，不能只恢复inventory而丢掉盘点元数据。未知响应保留原请求/键；刷新页面丢失客户端内存待确认队列，不能声称持久离线。
-
-无ERP真实授权、生产服务器/域名授权、实物设备验收或上线地址；未操作VPS/SSH/安全组/外部运行服务。继续更新原草稿PR，未获指示不合并或部署。源码包只含受控源码、证据和可用Git历史，不含运行数据库、凭证或依赖wheels。
+先备份再迁移005，无down。旧0.3不执行count_only及盘点锁，旧0.4也不理解调拨在途/待发锁，禁止直接降级继续写。异常停写、保留全部新流水、隔离备份和人工对账/前向修复，不删除元数据或覆盖库存。源码包只含受控源码/证据/Git可用历史，不含业务库、令牌或wheels。

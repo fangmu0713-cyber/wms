@@ -113,3 +113,20 @@ class CountScan(Input):
 
 class CountReview(Input):
     reason: Annotated[str, Field(min_length=3,max_length=500)]
+
+
+class Transfer(Input):
+    source_inventory_id: Text
+    destination_warehouse_id: Text
+    reference: Text
+    qty: Qty
+
+class TransferDispatch(Pick):
+    carrier: Text
+    tracking_number: Text
+
+class TransferReceive(Pick):
+    receipt_reference: Text
+
+class TransferLoss(CountReview):
+    qty: Qty

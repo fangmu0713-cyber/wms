@@ -1,0 +1,19 @@
+{
+  "entrypoint": "python -m scripts.local_trial",
+  "platform": "linux",
+  "prepare_only": "passed",
+  "real_loopback_process_health": "ok",
+  "restart_same_trial_no_reseed": true,
+  "synthetic_initial_on_hand": 100,
+  "orders": 1,
+  "accounts": 5,
+  "credential_file_mode": "0o600",
+  "stdout_stderr_contain_no_tokens": true,
+  "graceful_stop_exit": 0,
+  "reconciliation": {
+    "ok": true,
+    "issues": []
+  },
+  "public_deployment": false,
+  "windows_macos_tested": false
+}

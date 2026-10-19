@@ -1,0 +1,39 @@
+{
+  "environment": "isolated local trial; synthetic stock; real SQLite/HTTP/Chromium",
+  "initial": 100,
+  "dispatched": 20,
+  "received_batches": [
+    7,
+    8
+  ],
+  "confirmed_transit_loss": 5,
+  "final_source": 80,
+  "final_destination": 15,
+  "final_physical": 95,
+  "final_transit": 0,
+  "source_only_dispatch": true,
+  "destination_only_receive": true,
+  "count_only_hidden": true,
+  "previous_account_business_dom_cleared": true,
+  "duplicate_batch_rejected": true,
+  "response_loss_same_key_retry": [
+    "receive batch",
+    "loss close"
+  ],
+  "reconciliation": {
+    "ok": true,
+    "issues": []
+  },
+  "languages": [
+    "zh-CN",
+    "pt-BR"
+  ],
+  "viewports": [
+    "1440x1000",
+    "390x844"
+  ],
+  "javascript_errors": [],
+  "production_deployed": false,
+  "physical_devices_tested": false,
+  "erp_connected": false
+}

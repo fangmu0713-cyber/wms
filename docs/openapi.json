@@ -3,7 +3,7 @@
   "info": {
     "title": "Overseas WMS / OMS",
     "description": "Internal WMS API; no third-party ERP is enabled. Mutations require Idempotency-Key. Quantities are units, money BRL cents.",
-    "version": "0.4.0"
+    "version": "0.5.0"
   },
   "paths": {
     "/api/owners": {
@@ -628,6 +628,312 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/StockCount"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/transfers": {
+      "post": {
+        "summary": " Api Transfers",
+        "operationId": "_api_transfers_api_transfers_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Transfer"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/transfers/{object_id}/dispatch": {
+      "post": {
+        "summary": "Transfers Dispatch",
+        "operationId": "transfers_dispatch_api_transfers__object_id__dispatch_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "object_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Object Id"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferDispatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/transfers/{object_id}/receive": {
+      "post": {
+        "summary": "Transfers Receive",
+        "operationId": "transfers_receive_api_transfers__object_id__receive_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "object_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Object Id"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferReceive"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/transfers/{object_id}/cancel": {
+      "post": {
+        "summary": "Transfers Cancel",
+        "operationId": "transfers_cancel_api_transfers__object_id__cancel_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "object_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Object Id"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CountReview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/transfers/{object_id}/close_loss": {
+      "post": {
+        "summary": "Transfers Close Loss",
+        "operationId": "transfers_close_loss_api_transfers__object_id__close_loss_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "object_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Object Id"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferLoss"
               }
             }
           }
@@ -2796,6 +3102,48 @@
         }
       }
     },
+    "/api/transfers/{object_id}": {
+      "get": {
+        "summary": "Transfers Get",
+        "operationId": "transfers_get_api_transfers__object_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "object_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Object Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/stock_counts/{object_id}": {
       "get": {
         "summary": "Stock Counts Get",
@@ -3552,6 +3900,157 @@
           "owner_id"
         ],
         "title": "Store"
+      },
+      "Transfer": {
+        "properties": {
+          "source_inventory_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Source Inventory Id",
+            "strip_whitespace": true
+          },
+          "destination_warehouse_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Destination Warehouse Id",
+            "strip_whitespace": true
+          },
+          "reference": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Reference",
+            "strip_whitespace": true
+          },
+          "qty": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Qty"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_inventory_id",
+          "destination_warehouse_id",
+          "reference",
+          "qty"
+        ],
+        "title": "Transfer"
+      },
+      "TransferDispatch": {
+        "properties": {
+          "barcode": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Barcode",
+            "strip_whitespace": true
+          },
+          "location_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Location Id",
+            "strip_whitespace": true
+          },
+          "qty": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Qty"
+          },
+          "carrier": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Carrier",
+            "strip_whitespace": true
+          },
+          "tracking_number": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Tracking Number",
+            "strip_whitespace": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "barcode",
+          "location_id",
+          "qty",
+          "carrier",
+          "tracking_number"
+        ],
+        "title": "TransferDispatch"
+      },
+      "TransferLoss": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          },
+          "qty": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Qty"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason",
+          "qty"
+        ],
+        "title": "TransferLoss"
+      },
+      "TransferReceive": {
+        "properties": {
+          "barcode": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Barcode",
+            "strip_whitespace": true
+          },
+          "location_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Location Id",
+            "strip_whitespace": true
+          },
+          "qty": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Qty"
+          },
+          "receipt_reference": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Receipt Reference",
+            "strip_whitespace": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "barcode",
+          "location_id",
+          "qty",
+          "receipt_reference"
+        ],
+        "title": "TransferReceive"
       },
       "ValidationError": {
         "properties": {

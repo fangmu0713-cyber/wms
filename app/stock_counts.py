@@ -182,7 +182,7 @@ def blind_snapshot(db, actor):
     counts,_ = snapshot(db,actor)
     attempts = counts['count_attempts']
     ids = {key:{a[key] for a in attempts} for key in ('owner_id','warehouse_id','sku_id','location_id')}
-    result = {name:[] for name in ('stores','receipts','orders','order_lines','allocations','inventory','ledger','returns','fees','waves','pick_tasks','wave_orders','movements','stock_summary')}
+    result = {name:[] for name in ('stores','receipts','orders','order_lines','allocations','inventory','ledger','returns','fees','waves','pick_tasks','wave_orders','movements','transfers','transfer_events','stock_summary')}
     for table,key in (('owners','owner_id'),('warehouses','warehouse_id'),('skus','sku_id'),('locations','location_id')):
         result[table] = [dict(r) for r in db.execute(f'SELECT * FROM {table} WHERE tenant_id=?',(actor['tenant_id'],)) if r['id'] in ids[key]]
     result.update(counts)

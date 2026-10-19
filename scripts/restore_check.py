@@ -12,6 +12,7 @@ def restore(source, target):
         raise ValueError('backup does not exist')
     fd = os.open(target,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
     os.close(fd)
+    transfer_custody = 'not_applicable'
     with connect(source) as backup, connect(target) as restored:
         backup.backup(restored)
         assert restored.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
@@ -36,7 +37,20 @@ def restore(source, target):
             invalid += restored.execute('''SELECT c.attempt_id FROM count_locks c JOIN count_attempts a ON a.id=c.attempt_id
                 WHERE a.status<>'ACTIVE' ''').fetchall()
             assert not invalid, 'count measurement lock mismatch'
-    return {'integrity':'ok','foreign_keys':'ok','ledger_balances':'ok','counts':counts,'elapsed_seconds':round(time.perf_counter()-started,4)}
+        tables = {r['name'] for r in restored.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        if 'transfers' in tables:
+            from app.transfers import reconcile
+            issues = reconcile(restored,[dict(r) for r in restored.execute('SELECT * FROM transfers')])
+            assert not issues, 'transfer custody mismatch'
+            mismatches = restored.execute("""SELECT i.id FROM inventory i LEFT JOIN (
+                SELECT source_inventory_id,SUM(qty) q FROM (
+                    SELECT source_inventory_id,qty FROM movements WHERE status IN ('PLANNED','CLAIMED')
+                    UNION ALL SELECT source_inventory_id,qty FROM transfers WHERE status='TRANSFER_PLANNED'
+                ) GROUP BY source_inventory_id
+                ) h ON h.source_inventory_id=i.id WHERE i.move_reserved<>COALESCE(h.q,0)""").fetchall()
+            assert not mismatches, 'movement/transfer hold mismatch'
+            transfer_custody = 'ok'
+    return {'transfer_custody':transfer_custody,'integrity':'ok','foreign_keys':'ok','ledger_balances':'ok','counts':counts,'elapsed_seconds':round(time.perf_counter()-started,4)}
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()

@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request, Depends, Header
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import HTTPBearer
 from fastapi.staticfiles import StaticFiles
-from . import db as database, models, service, waves, movements, stock_counts
+from . import db as database, models, service, waves, movements, stock_counts, transfers
 from .auth import digest
 
 LOG = logging.getLogger('wms')
@@ -39,7 +39,7 @@ def authenticate(db, request):
 
 def create_app(db_path=None):
     path = str(db_path or database.default_path())
-    app = FastAPI(title='Overseas WMS / OMS',version='0.4.0',docs_url=None,redoc_url=None,description='Internal WMS API; no third-party ERP is enabled. Mutations require Idempotency-Key. Quantities are units, money BRL cents.')
+    app = FastAPI(title='Overseas WMS / OMS',version='0.5.0',docs_url=None,redoc_url=None,description='Internal WMS API; no third-party ERP is enabled. Mutations require Idempotency-Key. Quantities are units, money BRL cents.')
     app.state.db_path = path
     failures = defaultdict(deque)
     security = HTTPBearer(auto_error=False)
@@ -100,7 +100,10 @@ def create_app(db_path=None):
             if previous:
                 if previous['request_hash'] != request_hash:
                     service.fail('idempotency_key_reused_with_different_request')
-                return json.loads(previous['response'])
+                result = json.loads(previous['response'])
+                if request.url.path == '/api/transfers' or request.url.path.startswith('/api/transfers/'):
+                    transfers.authorize_replay(db,actor,request.url.path,result)
+                return result
             result = operation(db,actor,key,data)
             db.execute('INSERT INTO idempotency VALUES (?,?,?,?,?,?)',
                 (actor['tenant_id'],actor['id'],key,request_hash,json.dumps(result),service.now()))
@@ -125,6 +128,16 @@ def create_app(db_path=None):
     add_post('/api/waves',models.Wave,lambda db,a,k,d:waves.create(db,a,d))
     add_post('/api/movements',models.Movement,lambda db,a,k,d:movements.create(db,a,k,d))
     add_post('/api/stock_counts',models.StockCount,lambda db,a,k,d:stock_counts.create(db,a,d))
+
+    add_post('/api/transfers',models.Transfer,lambda db,a,k,d:transfers.create(db,a,k,d))
+
+    def add_transfer_action(action, model):
+        def endpoint(object_id: str, request: Request, payload: model):
+            return execute(request,payload.model_dump(),lambda db,a,k,d:transfers.action(db,a,k,object_id,action,d))
+        app.add_api_route('/api/transfers/{object_id}/'+action,endpoint,methods=['POST'],name='transfers_'+action,dependencies=[Depends(security),Depends(require_idempotency)])
+
+    for action, model in (('dispatch',models.TransferDispatch),('receive',models.TransferReceive),('cancel',models.CountReview),('close_loss',models.TransferLoss)):
+        add_transfer_action(action,model)
 
     def add_count_action(table, action, model):
         def endpoint(object_id: str, request: Request, payload: model):
@@ -201,6 +214,8 @@ def create_app(db_path=None):
                     service.permit(actor,'finance','owner','owner_readonly')
                 if table in ('waves','pick_tasks'):
                     service.permit(actor,'staff','picker')
+                if table=='transfers':
+                    service.permit(actor,*transfers.READ_ROLES)
                 if table=='movements':
                     service.permit(actor,*movements.EXECUTION_ROLES)
                 if table=='count_attempts':
@@ -209,7 +224,7 @@ def create_app(db_path=None):
                     service.permit(actor,'staff')
                 return service.get(db,actor,table,object_id)
         app.add_api_route('/api/'+table+'/{object_id}',endpoint,methods=['GET'],name=table+'_get',dependencies=[Depends(security)])
-    for table in ('owners','warehouses','locations','skus','stores','receipts','orders','inventory','ledger','returns','fees','waves','pick_tasks','movements','stock_counts','count_lines','count_attempts'):
+    for table in ('owners','warehouses','locations','skus','stores','receipts','orders','inventory','ledger','returns','fees','waves','pick_tasks','movements','transfers','stock_counts','count_lines','count_attempts'):
         add_get(table)
 
     @app.get('/health')

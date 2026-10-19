@@ -31,6 +31,8 @@ def visible(db, actor, row):
         return False
     if 'warehouse_id' in row.keys() and not allowed_warehouse(db,actor,row['warehouse_id']):
         return False
+    if 'source_warehouse_id' in row.keys() and not any(allowed_warehouse(db,actor,row[k]) for k in ('source_warehouse_id','destination_warehouse_id')):
+        return False
     return True
 
 
@@ -56,7 +58,7 @@ def same_owner(obj, owner_id):
         fail('resource_owner_mismatch',422)
 
 
-def stock(db, actor, key, inventory, source, event, on_hand=0, reserved=0, picked=0, move_reserved=0, in_transit=0, count_reserved=0, count_line_id=None):
+def stock(db, actor, key, inventory, source, event, on_hand=0, reserved=0, picked=0, move_reserved=0, in_transit=0, count_reserved=0, count_line_id=None, transfer_transit=0, transfer_lost=0):
     lock = db.execute('SELECT line_id FROM count_locks WHERE inventory_id=?',(inventory['id'],)).fetchone()
     if lock and lock['line_id'] != count_line_id:
         fail('inventory_locked_for_count')
@@ -75,6 +77,7 @@ def stock(db, actor, key, inventory, source, event, on_hand=0, reserved=0, picke
         'on_hand_delta':on_hand,'reserved_delta':reserved,'picked_delta':picked,
         'move_reserved_delta':move_reserved,'in_transit_delta':in_transit,
         'count_reserved_delta':count_reserved,
+        'transfer_transit_delta':transfer_transit,'transfer_lost_delta':transfer_lost,
         'actor_id':actor['id'],'idempotency_key':key,'created_at':now()})
 
 
@@ -261,7 +264,7 @@ def create_fee(db, actor, data):
 
 
 def snapshot(db, actor):
-    from . import stock_counts
+    from . import stock_counts, transfers
     if actor['count_only']:
         return stock_counts.blind_snapshot(db,actor)
     result = {}
@@ -283,18 +286,25 @@ def snapshot(db, actor):
         result['wave_orders'] = [dict(r) for r in db.execute('SELECT wo.* FROM wave_orders wo JOIN waves w ON w.id=wo.wave_id WHERE w.tenant_id=?',(actor['tenant_id'],)) if r['wave_id'] in wave_ids]
     movements = [dict(r) for r in db.execute('SELECT * FROM movements WHERE tenant_id=? ORDER BY created_at,id',(actor['tenant_id'],)) if visible(db,actor,r)]
     result['movements'] = movements if actor['role'] in ('admin','staff','picker','receiver') else []
+    transfer_rows = transfers.rows(db,actor)
+    can_read_transfers = actor['role'] in ('admin',*transfers.READ_ROLES)
+    result['transfers'] = transfer_rows if can_read_transfers else []
+    transfer_ids = {row['id'] for row in result['transfers']}
+    result['transfer_events'] = [dict(r) for r in db.execute('SELECT * FROM transfer_events WHERE tenant_id=? ORDER BY created_at,id',(actor['tenant_id'],)) if r['transfer_id'] in transfer_ids]
     counts,count_lines = stock_counts.snapshot(db,actor)
     result.update(counts)
     locked_ids = {r['inventory_id'] for r in db.execute('SELECT c.inventory_id FROM count_locks c JOIN inventory i ON i.id=c.inventory_id WHERE i.tenant_id=?',(actor['tenant_id'],))}
     for inv in result['inventory']:
         inv['count_locked'] = inv['id'] in locked_ids
         inv['available'] = 0 if inv['count_locked'] else inv['on_hand'] - inv['reserved'] - inv['move_reserved'] - inv['count_reserved']
-    result['reconciliation'] = reconcile(result,movements,count_lines)
-    result['stock_summary'] = quality_summary(result,movements)
+    result['reconciliation'] = reconcile(result,movements,count_lines,transfer_rows)
+    result['reconciliation']['issues'].extend(transfers.reconcile(db,transfer_rows))
+    result['reconciliation']['ok'] = not result['reconciliation']['issues']
+    result['stock_summary'] = quality_summary(result,movements,transfer_rows)
     return result
 
 
-def quality_summary(snapshot, movements=()):
+def quality_summary(snapshot, movements=(), transfers=()):
     """Physical custody includes uninspected and rejected goods, never allocatable."""
     groups = {}
     def group(row):
@@ -302,6 +312,7 @@ def quality_summary(snapshot, movements=()):
         if key not in groups:
             groups[key] = {k:row[k] for k in ('owner_id','warehouse_id','sku_id')} | {
                 'on_hand':0,'reserved':0,'picked':0,'move_reserved':0,'count_reserved':0,'available':0,'in_transit':0,
+                'transfer_in_transit':0,'transfer_lost':0,
                 'pending_qc':0,'qualified_unstored':0,'rejected':0,'physical_total':0}
         return groups[key]
     for row in snapshot['inventory']:
@@ -311,6 +322,14 @@ def quality_summary(snapshot, movements=()):
     for movement in movements:
         if movement['status']=='IN_TRANSIT':
             group(movement)['in_transit'] += movement['qty']
+    warehouses = {row['id'] for row in snapshot['warehouses']}
+    for transfer in transfers:
+        if transfer['source_warehouse_id'] in warehouses:
+            row = {**transfer, 'warehouse_id':transfer['source_warehouse_id']}
+            summary = group(row)
+            if transfer['status'] in ('DISPATCHED','PART_RECEIVED'):
+                summary['transfer_in_transit'] += transfer['qty'] - transfer['received_qty'] - transfer['lost_qty']
+            summary['transfer_lost'] += transfer['lost_qty']
     for row in snapshot['receipts'] + snapshot['returns']:
         if row['status']=='EXPECTED':
             continue  # A notice is not physical receipt.
@@ -322,11 +341,11 @@ def quality_summary(snapshot, movements=()):
             if row['status']=='QC_DONE':
                 summary['qualified_unstored'] += row['accepted_qty']
     for summary in groups.values():
-        summary['physical_total'] = summary['on_hand']+summary['in_transit']+summary['pending_qc']+summary['qualified_unstored']+summary['rejected']
+        summary['physical_total'] = summary['on_hand']+summary['in_transit']+summary['transfer_in_transit']+summary['pending_qc']+summary['qualified_unstored']+summary['rejected']
     return list(groups.values())
 
 
-def reconcile(snapshot, movements=(), count_lines=()):
+def reconcile(snapshot, movements=(), count_lines=(), transfers=()):
     issues = []
     sums = {}
     allocations = {}
@@ -338,6 +357,9 @@ def reconcile(snapshot, movements=(), count_lines=()):
     for movement in movements:
         if movement['status'] in ('PLANNED','CLAIMED'):
             movement_holds[movement['source_inventory_id']] = movement_holds.get(movement['source_inventory_id'],0)+movement['qty']
+    for transfer in transfers:
+        if transfer['status']=='TRANSFER_PLANNED':
+            movement_holds[transfer['source_inventory_id']] = movement_holds.get(transfer['source_inventory_id'],0)+transfer['qty']
     for entry in snapshot['ledger']:
         values = sums.setdefault(entry['inventory_id'],[0,0,0,0,0])
         for i,k in enumerate(('on_hand_delta','reserved_delta','picked_delta','move_reserved_delta','count_reserved_delta')):

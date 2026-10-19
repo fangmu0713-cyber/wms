@@ -33,7 +33,7 @@ class BrowserCountFlow(unittest.TestCase):
             while not server.started and time.monotonic()<deadline:
                 time.sleep(0.05)
             self.assertTrue(server.started)
-            evidence = Path(__file__).resolve().parents[1]/'evidence/stage4'
+            evidence = Path(os.environ.get('WMS_COUNT_EVIDENCE_DIR') or Path(__file__).resolve().parents[1]/'evidence/stage4')
             evidence.mkdir(parents=True,exist_ok=True)
             try:
                 with httpx.Client(base_url=base_url,headers={'Authorization':'Bearer '+admin['token']}) as api,sync_playwright() as playwright:

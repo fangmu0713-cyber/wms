@@ -108,3 +108,26 @@ POST `/api/stock_counts/{id}/cancel {reason}`允许admin/staff在OPEN/REVIEW取�
 核对增加count_reserved投影=账本累加=有效count_lines.hold_qty之和；备份恢复验证该投影和ACTIVE任务的持久测量锁，缺004服务健康/认证返回503。既有用户迁移后count_only=0；专用盘点账号必须明确另行签发。
 
 当前无全仓多SKU自动盘点计划、未标识商品认领、货主自助盘点或跨仓盘点。旧0.3不理解测量锁/count_reserved，且不会强制count_only凭证边界，禁止直接切回旧代码。回退须停写、保留新流水、撤销专用盘点凭证并人工对账，优先前向修复；无破坏性down。
+
+
+## 0.5 跨仓调拨（005）
+
+单货主/单SKU/单源库位、另一目标仓库，不能转移货主归属。POST `/api/transfers {source_inventory_id,destination_warehouse_id,reference,qty}`：admin/staff，主管须源/目标两仓授权；源租户/货主/SKU/库位均由库存推导，目标须同租户不同仓。reference在tenant/source_warehouse唯一。建单状态TRANSFER_PLANNED，来源move_reserved增加qty，与同仓搬运共用待作业锁，预占路径扣除它；测量锁与count_reserved继续生效。
+
+GET `/api/transfers/{id}`与snapshot.transfers/transfer_events仅admin/staff/picker/receiver可读，当前租户且至少有一端仓权限；可见单据含双方ID、数量、参考号、状态、承运方/运单和操作记录，未授权仓的其他主数据/余额不因此开放。货主/财务的调拨操作数组为空，其授权库存汇总/核对仍计算调拨。专用count_only的路由、快照、缓存隔离继续生效，调拨与事件数组为空。
+
+POST `/api/transfers/{id}/dispatch {barcode,location_id,qty,carrier,tracking_number}`：admin/staff/picker，须源仓权限，TRANSFER_PLANNED、正确SKU/源库位、完整单qty；on_hand−qty、move_reserved−qty、transfer_transit_delta+qty，状态DISPATCHED。承运方/运单是手工记录，不代表已连接承运商。无需将两仓权限授给发出人员。
+
+POST `/api/transfers/{id}/receive {barcode,location_id,qty,receipt_reference}`：admin/staff/receiver，须目标仓权限，DISPATCHED/PART_RECEIVED；正整数qty≤剩余在途，正确SKU、目标仓实际库位。仅确认合格实到件；目标on_hand+qty、transfer_transit_delta−qty，不改源仓余额。可多批/多库位，收到全qty后COMPLETED，否则PART_RECEIVED。每个transfer_id/kind=RECEIVE/receipt_reference唯一，跨账号或新幂等键重复同批也拒绝；未知响应重用原键可重放原响应。不能按目标库存增减倒推实际签收。
+
+POST `/api/transfers/{id}/cancel {reason}`：admin/staff，须两仓权限，仅TRANSFER_PLANNED，释放来源move_reserved、不改变实物，CANCELLED。原因3–500字符。
+
+POST `/api/transfers/{id}/close_loss {qty,reason}`：仅admin，在DISPATCHED/PART_RECEIVED、qty必须等于全部剩余在途且>0、原因3–500字符。根据已确认在途丢失依据结案，ledger.transfer_transit_delta−qty、transfer_lost_delta+qty，on_hand不变，CLOSED_WITH_LOSS。不是残次实到登记/报废或赔偿、财务结算；未查明异常继续在途。终态不允许再次接收/取消/反向改写；找回与物理退回待独立流程。结案账本锚定源inventory，源库存实盘测量时需先结束测量再结案。
+
+各动作与余额、不可改删transfer_events、账本、审计、幂等记录同一BEGIN IMMEDIATE事务。事件有kind、qty、reference、location_id、actor_id、reason、created_at。收到响应丢失时只重试原请求；旧键响应重放仍检查当前角色与相应端的仓授权，不重新执行终态动作。新的键不能再dispatch或重复终态处理。正整数严格校验，禁止bool/小数/0/负数。
+
+库存口径：available继续扣订单、move_reserved及count_reserved，测量锁时为0。原in_transit只表示同仓搬运；新增transfer_in_transit按源仓归集仍未结案的qty−received_qty−lost_qty，目标仓不重复计算在途；transfer_lost是源仓累计确认丢失的历史量，不是现存实物。physical_total=on_hand+同仓in_transit+transfer_in_transit+pending_qc+qualified_unstored+rejected。一端权限视图仅计算该端库存与源端责任在途，接收不会双计。全租户调拨时在库+在途守恒，确认丢失时减少保管实物、历史丢失增加。
+
+核对：move_reserved=未搬出同仓任务+未发出调拨；逐调拨事件与当前received/lost/dispatch/cancel状态一致；跨两仓账本on_hand_delta累加=已接收−已发出、transfer_transit_delta=剩余在途、transfer_lost_delta=lost_qty、move_reserved_delta=未发出锁。服务端内部读取可见单据的两端流水来核对，不向调用者返回未授权仓账本。恢复工具同样拒绝账本/调拨事件/锁投影不符。005只增不改001–004，已有ledger新增列为0。缺迁移健康503，无破坏性down；不得切回不理解调拨锁与在途的旧代码继续写入。
+
+当前无多SKU合单、部分发出、跨货主转移、调拨退回、在途找回撤销、残次接收/处置、物流API或实机验收。

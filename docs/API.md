@@ -40,3 +40,15 @@
 新增stock_counts/count_lines/count_attempts/count_operators；范围为单货主、单仓、单SKU及明确库位。admin/staff建单、安排不同专用账号实盘/复盘；admin填写原因后审批。详见CONTRACT。专用盘点凭证由CLI `user --role picker --count-only`签发，只能读取/提交自己的任务，不能读账面或其他业务数据。
 
 盘点截点只在测量暂停时采集，读数提交即释放测量锁。短少另记count_reserved，其他数量可以正常作业。inventory.count_locked=true时available=0；其他时候available=on_hand−reserved−move_reserved−count_reserved。审批只把差额加到当时余额，保留截点后所有合法流水；不能按历史实盘数覆盖当前库存。本文前面“尚未支持盘点”属于旧版本范围，0.4以上述契约为准。
+
+
+## 0.5 跨仓调拨
+
+- POST /api/transfers：source_inventory_id、destination_warehouse_id、reference、qty。
+- POST /api/transfers/{id}/dispatch：barcode、location_id、qty（整单）、carrier、tracking_number。
+- POST /api/transfers/{id}/receive：barcode、location_id、qty（可部分）、receipt_reference（调拨内唯一批次）。
+- POST /api/transfers/{id}/cancel：reason，仅发出前主管两仓授权。
+- POST /api/transfers/{id}/close_loss：qty（全部剩余在途）、reason，仅admin。
+- GET /api/transfers/{id}；snapshot.transfers/transfer_events。非作业角色/盲盘账号数组为空。
+
+所有POST均需原有Idempotency-Key。源/目标仓分权、丢失依据和守恒口径见CONTRACT；本地虚构样例见LOCAL_TRIAL。received_qty/lost_qty为当前累计数，remaining=qty−received_qty−lost_qty仅在DISPATCHED/PART_RECEIVED表示未结案在途。迁移新增ledger.transfer_transit_delta/transfer_lost_delta；与原同仓in_transit_delta分开。

@@ -151,6 +151,7 @@ function populateSelects(root = document) {
   document.querySelectorAll("[data-mode]").forEach(button => { button.disabled = Boolean(user?.count_only); });
   $('[data-view="waves"]').hidden = !user || !["admin","staff","picker"].includes(user.role);
   $('[data-view="movements"]').hidden = !user || !["admin","staff","picker","receiver"].includes(user.role);
+  $('[data-view="transfers"]').hidden = !user || !["admin","staff","picker","receiver"].includes(user.role);
   if (user?.count_only) document.querySelectorAll("[data-view]").forEach(button => { button.hidden = button.dataset.view !== "counts"; });
   root.querySelectorAll("select[data-options]").forEach(selectEl => [...selectEl.options].forEach(option => { option.textContent = t(option.value); }));
   root.querySelectorAll("select[data-source]").forEach(selectEl => {
@@ -168,6 +169,16 @@ function populateSelects(root = document) {
       if (scopeWarehouse) items = items.filter(item => item.warehouse_id === scopeWarehouse);
       items = [...new Map(items.map(item => [item.id,item])).values()];
     }
+    if (selectEl.dataset.source === "transfers") {
+      const side = form.id === "transfer-receive-form" ? "destination_warehouse_id" : "source_warehouse_id";
+      items = items.filter(item => array("warehouses").some(w => w.id === item[side]));
+      if (form.id === "transfer-cancel-form") items = items.filter(item => array("warehouses").some(w => w.id === item.destination_warehouse_id));
+    }
+    if (form?.id.startsWith("transfer-")) {
+      const transferId = form.querySelector('[name="transfer_id"]')?.value, transfer = array("transfers").find(item => item.id === transferId);
+      if (selectEl.dataset.source === "locations" && transfer) items = items.filter(item => form.id === "transfer-receive-form" ? item.warehouse_id === transfer.destination_warehouse_id : item.id === transfer.source_location_id);
+      if (selectEl.name === "destination_warehouse_id") { const source = array("inventory").find(item => item.id === form.querySelector('[name="source_inventory_id"]')?.value); if (source) items = items.filter(item => item.id !== source.warehouse_id); }
+    }
     if (selectEl.name === "source_inventory_id") items = items.filter(item => item.available > 0);
     if (selectEl.name === "destination_location_id") { const sourceId = form?.querySelector('[name="source_inventory_id"]')?.value, source = array("inventory").find(item => item.id === sourceId); if (source) items = items.filter(item => item.warehouse_id === source.warehouse_id && item.id !== source.location_id); }
     if (selectEl.dataset.source === "movements" && ["movement-dispatch-form","movement-receive-form","movement-release-form"].includes(form?.id)) items = items.filter(item => item.assignee_id === user?.id);
@@ -175,6 +186,7 @@ function populateSelects(root = document) {
     if (selectEl.multiple) selectEl.replaceChildren();
     items.forEach(record => {
       let label = recordLabel(record);
+      if (selectEl.dataset.source === "transfers") label = `${record.reference} · ${shortLookup("skus",record.sku_id)} · ${t("qty")}: ${record.qty} · ${t("received_qty")}: ${record.received_qty} · ${record.id}`;
       if (selectEl.dataset.source === "count_attempts") label = `${shortLookup("owners",record.owner_id)} · ${shortLookup("locations",record.location_id)} · ${shortLookup("skus",record.sku_id)} · ${t("round")}: ${record.round} · ${record.id}`;
       if (selectEl.dataset.source === "count_lines") label = `${shortLookup("stock_counts",record.session_id)} · ${shortLookup("locations",record.location_id)} · ${record.id}`;
       if (selectEl.dataset.source === "inventory") label = `${shortLookup("owners",record.owner_id)} · ${shortLookup("warehouses",record.warehouse_id)} · ${shortLookup("skus",record.sku_id)} · ${shortLookup("locations",record.location_id)} · ${t("available")}: ${record.available}`;
@@ -184,6 +196,12 @@ function populateSelects(root = document) {
     if (selectEl.multiple) return;
     if (items.some(item => item.id === previous)) selectEl.value = previous;
     else if (items.length === 1) selectEl.value = items[0].id;
+  });
+  document.querySelectorAll('[data-schema^="transfer-"] form').forEach(form => {
+    const id = form.querySelector('[name="transfer_id"]')?.value, transfer = array("transfers").find(item => item.id === id);
+    let note = form.querySelector(".transfer-quantity-note");
+    if (!note) { note = node("p",undefined,"form-help transfer-quantity-note"); form.prepend(note); }
+    note.textContent = transfer ? `${t("qty")}: ${transfer.qty} · ${t("received_qty")}: ${transfer.received_qty} · ${t("remaining_qty")}: ${["DISPATCHED","PART_RECEIVED"].includes(transfer.status) ? transfer.qty-transfer.received_qty-transfer.lost_qty : 0}` : "";
   });
   schemas.forEach(schema => { const card = document.querySelector(`[data-schema="${schema.id}"]`); card.hidden = Boolean(user && (user.count_only ? schema.id !== "count-submit" : schema.id === "count-submit" || (user.role !== "admin" && !actionRoles[schema.id].includes(user.role)))); });
 }
@@ -206,11 +224,11 @@ async function submitForm(form,schema) {
   } catch (error) { if (version !== sessionVersion) return; operation.uncertain = Boolean(error.uncertain || error.status >= 500); result.className = "form-result error"; result.textContent = error.message; if (error.status === 401) message(t("authFailed"),true); }
   finally { form.dataset.busy = "false"; form.removeAttribute("aria-busy"); submit.disabled = false; submit.dataset.i18n = operation.uncertain ? "retryPending" : "submit"; submit.textContent = t(submit.dataset.i18n); form.querySelectorAll("input,select,button[type=button]").forEach(control => { control.disabled = operation.uncertain; }); }
 }
-function rowTimezone(record) { return array("warehouses").find(item => item.id === record.warehouse_id)?.timezone || "America/Sao_Paulo"; }
+function rowTimezone(record) { const transfer = array("transfers").find(item => item.id === record.transfer_id); const warehouseId = record.warehouse_id || record.source_warehouse_id || (record.kind === "RECEIVE" ? transfer?.destination_warehouse_id : transfer?.source_warehouse_id); return array("warehouses").find(item => item.id === warehouseId)?.timezone || "America/Sao_Paulo"; }
 function shortLookup(key,id) { const row = array(key).find(item => item.id === id); return row ? row.name || row.code || row.reference || row.id : id; }
 function formatValue(key,value,record = {},compact = false) {
   if (value === undefined || value === null || value === "") return "—";
-  const linked = {owner_id:"owners",warehouse_id:"warehouses",sku_id:"skus",location_id:"locations",store_id:"stores",order_id:"orders",wave_id:"waves",session_id:"stock_counts",counter_id:"count_operators",source_location_id:"locations",destination_location_id:"locations"};
+  const linked = {owner_id:"owners",warehouse_id:"warehouses",sku_id:"skus",location_id:"locations",store_id:"stores",order_id:"orders",wave_id:"waves",session_id:"stock_counts",counter_id:"count_operators",source_location_id:"locations",destination_location_id:"locations",source_warehouse_id:"warehouses",destination_warehouse_id:"warehouses",transfer_id:"transfers"};
   if (linked[key]) return compact ? shortLookup(linked[key],value) : lookup(linked[key],value);
   if (key === "assignee_id" && value === user?.id) return user.name;
   if (key === "kind") return t(value);
@@ -225,7 +243,7 @@ function table(target,rows,columns) {
   if (!rows.length) { el.append(node("div",t("empty"),"empty")); return; }
   const wrap = node("div",undefined,"table-wrap"), tableEl = document.createElement("table"), head = document.createElement("thead"), header = document.createElement("tr");
   columns.forEach(key => { const th = node("th",t(key === "amount_cents" ? "amount" : key)); th.scope = "col"; header.append(th); }); head.append(header); tableEl.append(head);
-  const tbody = document.createElement("tbody"); rows.forEach(record => { const row = document.createElement("tr"); if (record.id) row.dataset.recordId = record.id; columns.forEach(key => { const cell = document.createElement("td"); if (key === "status") { cell.append(node("span",statusLabel(record[key] || "—"),`badge status${["CANCELLED","EXPECTED"].includes(record[key]) ? " pending" : ""}`)); } else { cell.textContent = formatValue(key,record[key],record,["wave-records","task-records","movement-records","count-session-records","count-line-records","count-attempt-records"].includes(el.id)); if (key === "id") cell.className = "id-cell"; if (key.endsWith("_at")) cell.title = rowTimezone(record); } cell.dataset.column = key; row.append(cell); }); tbody.append(row); }); tableEl.append(tbody); wrap.append(tableEl); el.append(wrap);
+  const tbody = document.createElement("tbody"); rows.forEach(record => { const row = document.createElement("tr"); if (record.id) row.dataset.recordId = record.id; columns.forEach(key => { const cell = document.createElement("td"); if (key === "status") { cell.append(node("span",statusLabel(record[key] || "—"),`badge status${["CANCELLED","EXPECTED"].includes(record[key]) ? " pending" : ""}`)); } else { cell.textContent = formatValue(key,record[key],record,["wave-records","task-records","movement-records","count-session-records","count-line-records","count-attempt-records","transfer-records","transfer-event-records"].includes(el.id)); if (key === "id") cell.className = "id-cell"; if (key.endsWith("_at")) cell.title = rowTimezone(record); } cell.dataset.column = key; row.append(cell); }); tbody.append(row); }); tableEl.append(tbody); wrap.append(tableEl); el.append(wrap);
 }
 function renderData() {
   if (!snapshot) return;
@@ -252,11 +270,13 @@ function renderData() {
   table("#order-records",array("orders").slice().reverse(),orderColumns);
   table("#wave-records",array("waves"),["reference","owner_id","warehouse_id","status","created_at","id"]);
   table("#task-records",array("pick_tasks"),["wave_id","sequence","location_id","sku_id","order_id","qty","picked_qty","status","assignee_id","id"]);
+  table("#transfer-records",array("transfers").slice().reverse().map(row => ({...row,remaining_qty:["DISPATCHED","PART_RECEIVED"].includes(row.status) ? row.qty-row.received_qty-row.lost_qty : 0})),["reference","owner_id","source_warehouse_id","destination_warehouse_id","sku_id","qty","received_qty","remaining_qty","lost_qty","status","carrier","tracking_number","id"]);
+  table("#transfer-event-records",array("transfer_events").slice().reverse(),["created_at","transfer_id","kind","reference","qty","location_id","reason","id"]);
   table("#movement-records",array("movements").slice().reverse(),["reference","kind","source_location_id","destination_location_id","sku_id","qty","status","assignee_id","id"]);
   table("#receipt-records",array("receipts").slice().reverse(),["reference","owner_id","warehouse_id","sku_id","qty","accepted_qty","rejected_qty","status","id"]);
   table("#inventory-records",inventory,["owner_id","warehouse_id","sku_id","location_id","on_hand","reserved","picked","move_reserved","count_reserved","count_locked","available"]);
-  table("#stock-quality-records",array("stock_summary"),["owner_id","warehouse_id","sku_id","on_hand","move_reserved","count_reserved","in_transit","pending_qc","qualified_unstored","rejected","physical_total"]);
-  const ledgerCols = ["created_at","owner_id","warehouse_id","sku_id","location_id","event_type","on_hand_delta","reserved_delta","picked_delta","move_reserved_delta","count_reserved_delta","in_transit_delta","source_id","id"];
+  table("#stock-quality-records",array("stock_summary"),["owner_id","warehouse_id","sku_id","on_hand","move_reserved","count_reserved","in_transit","transfer_in_transit","transfer_lost","pending_qc","qualified_unstored","rejected","physical_total"]);
+  const ledgerCols = ["created_at","owner_id","warehouse_id","sku_id","location_id","event_type","on_hand_delta","reserved_delta","picked_delta","move_reserved_delta","count_reserved_delta","in_transit_delta","transfer_transit_delta","transfer_lost_delta","source_id","id"];
   const ledgerRows = array("ledger").map(item => ({...item,event_type:item.event_type || item.type || item.kind,on_hand_delta:item.on_hand_delta ?? item.delta_on_hand ?? item.delta,reserved_delta:item.reserved_delta ?? item.delta_reserved,picked_delta:item.picked_delta ?? item.delta_picked,source_id:item.source_id || item.reference_id || item.event_id}));
   table("#ledger-records",ledgerRows.slice().reverse(),ledgerCols);
   const masterRecords = $("#master-records"); masterRecords.replaceChildren();
@@ -285,16 +305,19 @@ function renderIntegrations() {
   });
 }
 function renderRoadmap() {
-  const rows = [["coreScope","coreScopeHelp","implemented"],["extendedScope","extendedScopeHelp","implemented"],["waveScope","waveHelp","implemented"],["moveScope","moveScopeHelp","implemented"],["countScope","countScopeHelp","implemented"],["efficiencyScope","efficiencyScopeHelp","unsupported"],["financeScope",null,"unsupported"],["advancedScope",null,"unsupported"],["devicesScope",null,"devicePending"],["productionScope","productionHelp","pendingAuthorization"]];
+  const rows = [["coreScope","coreScopeHelp","implemented"],["extendedScope","extendedScopeHelp","implemented"],["waveScope","waveHelp","implemented"],["moveScope","moveScopeHelp","implemented"],["countScope","countScopeHelp","implemented"],["transferScope","transferScopeHelp","implemented"],["efficiencyScope","efficiencyScopeHelp","unsupported"],["financeScope",null,"unsupported"],["advancedScope",null,"unsupported"],["devicesScope",null,"devicePending"],["productionScope","productionHelp","pendingAuthorization"]];
   $("#roadmap-records").replaceChildren(...rows.map(([title,help,status]) => { const row = node("div",undefined,"roadmap-row"), text = node("div"); text.append(node("strong",t(title))); if (help) text.append(node("p",t(help))); row.append(text,node("span",t(status),`badge${status === "implemented" ? "" : " warning"}`)); return row; }));
 }
 function logout() {
   $('[data-view="waves"]').hidden = true; $('[data-view="movements"]').hidden = true;
   ["#wave-records","#task-records","#movement-records"].forEach(selector => $(selector).replaceChildren());
   sessionVersion++; token = ""; user = null; snapshot = null; lastRefreshed = null; $("#api-token").value = ""; $("#connected-content").hidden = true; $("#login-panel").hidden = false; $("#logout").hidden = true; $("#identity").textContent = t("disconnected"); $("#refresh").disabled = true;
-  document.querySelectorAll("[data-view]").forEach(button => { button.hidden = ["counts","waves","movements"].includes(button.dataset.view); });
+  document.querySelectorAll("[data-view]").forEach(button => { button.hidden = ["counts","waves","movements","transfers"].includes(button.dataset.view); });
   document.querySelectorAll("[data-mode]").forEach(button => { button.disabled = false; });
-  ["#count-session-records","#count-line-records","#count-attempt-records"].forEach(selector => $(selector).replaceChildren());
+  ["#count-session-records","#count-line-records","#count-attempt-records","#transfer-records","#transfer-event-records"].forEach(selector => $(selector).replaceChildren());
+  ["#metrics","#flow","#recent-orders","#reconciliation-summary","#reconciliation-records","#inventory-records","#stock-quality-records","#ledger-records","#master-records","#receipt-records","#order-records","#allocation-records","#return-records","#fee-records","#integration-records","#roadmap-records"].forEach(selector => $(selector).replaceChildren());
+  document.querySelectorAll("select[data-source]").forEach(control => control.replaceChildren());
+  document.querySelectorAll(".transfer-quantity-note").forEach(el => { el.textContent = ""; });
   showView("overview");
   document.querySelectorAll(".form-result").forEach(el => { el.textContent = ""; delete el.dataset.recordId; delete el.dataset.recordStatus; });
   document.querySelectorAll(".business-form").forEach(form => { submissions.delete(form); form.reset(); form.querySelectorAll("input,select,button").forEach(control => { control.disabled = false; }); const submit = form.querySelector('[type="submit"]'); submit.dataset.i18n = "submit"; submit.textContent = t("submit"); });
@@ -304,7 +327,7 @@ function logout() {
 }
 buildForms(); translate();
 document.addEventListener("click",event => { const view = event.target.closest("[data-view],[data-go]"); if (view) showView(view.dataset.view || view.dataset.go); const mode = event.target.closest("[data-mode]"); if (mode) { document.querySelectorAll("[data-mode]").forEach(el => el.classList.toggle("active",el === mode)); showView(mode.dataset.mode === "pda" ? "pda" : mode.dataset.mode === "oms" ? "orders" : "overview"); } });
-document.addEventListener("change",event => { if (["owner_id","warehouse_id","source_inventory_id","line_id"].includes(event.target.name) && snapshot) populateSelects(event.target.closest("form")); });
+document.addEventListener("change",event => { if (["owner_id","warehouse_id","source_inventory_id","line_id","transfer_id"].includes(event.target.name) && snapshot) populateSelects(event.target.closest("form")); });
 $("#language").addEventListener("change",event => { language = event.target.value; translate(); });
 $("#logout").addEventListener("click",logout);
 $("#refresh").addEventListener("click",async () => { try { await refresh(); $("#notice").hidden = true; } catch (error) { message(error.message,true); } });
