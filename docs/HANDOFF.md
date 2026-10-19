@@ -1,45 +1,49 @@
-# HANDOFF — 库内补货/移位续接
+# HANDOFF — 0.4盘点续接
 
-仓库的交付分支为codex/wms-warehouse-movements，保留阶段1a2681d4历史。本轮云环境已重置；原上传zip可恢复阶段1，上轮a0a955d和生成包不在当前环境，波次按本聊天代码重建并重新验证。不要声称旧a0对象已找回。
+持久分支`codex/wms-warehouse-movements`，草稿PR：https://github.com/fangmu0713-cyber/wms/pull/1 。本轮从63fb8df同步继续；准确最新SHA见git log及远程。不要仅检出main初始README或旧源码包重新开发。
 
-## 当前实现
+## 当前交付
 
-0.3.0 = 阶段1真实履约链 + 002波次/独立拣货任务 + 003同仓人工补货/移位。001未改；002保持上轮表/字段/约束契约。库存口径、状态和API见CONTRACT，最新证据见evidence/stage3与VALIDATION。
+0.4.0 = 真实履约 + 002波次/独立拣货 + 003同仓人工补货/移位 + 004截点盘点/盲盘/独立复盘/差异审批。001/002/003未改，下一迁移005。
 
-补货/移位：建任务锁move_reserved，订单预占必须扣除此锁定；领取后来源扫描整任务搬出，源库位减少/任务进入IN_TRANSIT，再目标扫描整任务接收，目标库位增加。同仓实物总量包含搬运中。搬出前可取消；释放领取保留待搬锁，只有取消才释放数量。搬出后不允许直接取消、换人或部分接收，未确认目标实物时不能假装到位。
+盘点为单货主/单仓/单SKU明确库位集合。测量开始要求无订单/已拣/搬运占用，同事务记录当前on_hand与ledger rowid，持久锁定所选库存；其他库存可继续。读数提交释放测量锁，短少数量另锁count_reserved。最近两次不同账号的差额一致才接受非零差异；复盘重新取当前截点，不能直接比较不同时间的总读数。审批只增减差额，不覆盖当前余额。
 
-所有写入BEGIN IMMEDIATE，投影/账本/任务/幂等/审计同事务。新任务角色：admin/staff创建取消；admin/staff/picker/receiver执行本人领取任务。货主库存汇总含自身搬运中数量，但仓内任务/领取人数据不可读。波次仍限admin/staff/picker。
+专用count_only凭证只能是CLI明确签发的picker，旧用户默认0。认证、GET、snapshot和幂等响应均执行限制，不给账面/截点/差额或他人读数。admin/staff建单、分配复盘、取消；只有admin可审批，需原因。服务器只证明不同账号，现实人员独立性由现场管理保证。
 
-## 启动与测试
+测量锁期间inventory.count_locked=true/available=0；否则available=on_hand−reserved−move_reserved−count_reserved。所有库存写经service.stock检查测量锁，COUNT_HOLD/CANCEL仅内部可针对本行放行。取消释放锁并保留证据，不解决实物差异。读数和截点不能改删。
+
+## 启动与可复验命令
 
 ```bash
 python -m pip install -r requirements.lock
 python -m pip install -r requirements-test.txt
 python -m app.cli migrate
 python -m app.cli bootstrap --tenant '测试公司' --name '管理员'
+python -m app.cli user --tenant-id TENANT_ID --name '初盘员' --role picker --count-only --warehouse-id WAREHOUSE_ID --output var/counter-a.token
+python -m app.cli user --tenant-id TENANT_ID --name '复盘员' --role picker --count-only --warehouse-id WAREHOUSE_ID --output var/counter-b.token
 uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log
 python -m unittest discover -s tests -v
-python -m tests.browser_warehouse -v
-WMS_EVIDENCE_DIR=evidence/stage3/legacy python -m tests.browser_flow -v
+python -m tests.browser_counts -v
+WMS_WAREHOUSE_EVIDENCE_DIR=evidence/stage4/warehouse python -m tests.browser_warehouse -v
+WMS_EVIDENCE_DIR=evidence/stage4/legacy python -m tests.browser_flow -v
 ```
 
-测试使用隔离临时库。当前云环境TestClient/Chromium需工具network.enabled=true支持本机socket，否则可挂起。无新增依赖，不需ERP凭证。令牌只写受保护文件，不发聊天、不进包。
+签发凭证只写0600文件，不能发聊天/截图/进包。当前云环境TestClient/Chromium需要工具network.enabled=true支持本机socket。测试均独立临时库，命令无需ERP凭证。无新依赖。
 
-44项后端测试和2项浏览器流程已验收，最终结果以VALIDATION为准。浏览器实测同仓40件搬运、错误扫描、接收已落库但丢响应后原键重试、取消未搬出任务、货主权限、中葡桌面/手机、波次两单发5件后95和核对通过。
+64项后端+3套真实浏览器通过；结果/截图见evidence/stage4和VALIDATION。覆盖盘点期间出库/上架/搬运、并发预占/审批、盲盘API与缓存响应隔离、独立复盘、差异锁防超占、多行失败回滚、003升级、持久锁/读数/短少锁的独立恢复和错误元数据拒绝。典型100→实盘98→发3→复盘95（账97）→再发5→审批差额−2→90，核对通过。
 
-0.3镜像标签已更新，但本轮未构建或运行容器；0.1容器/负载证据是历史记录。升级先备份并在恢复副本演练迁移。003无down；存在搬运锁/搬运中时不可直接回退不理解此口径的旧代码。停写后保留所有新流水，前向修复或经人工对账恢复，不能丢弃真实物理事件。
+## 继续顺序
 
-## 准确下一步
+1. 先读AGENTS/PROJECT_STATUS/TASK_BOARD/DECISIONS/CONTRACT及总任务书，核对git、远程和证据；从005迁移继续，不改001–004。
+2. 做跨仓调拨的发出/在途/部分接收/丢损，先明确同一货主与两仓授权、库存口径、唯一事件和守恒。不能把同仓IN_TRANSIT当作跨仓已完成。
+3. 作业异常/实体回位/换人交接，多包裹与部分履约先扩行过账；随后完整OMS/ASN/异常/私有附件/导出、报价/账单等。
+4. 全仓多SKU自动盘点、未知商品认领、货主盘点门户、自动补货、部分搬运/损耗/回位等未实现，当前不能计入完成。
+5. 真实ERP需正式协议/账号/接口权限，先只读再沙箱；P5仍需认证加强、CLI管理审计、分页、长期负载、监控、实机和库存切换。
 
-1. 先读AGENTS、PROJECT_STATUS、TASK_BOARD、DECISIONS、CONTRACT和总任务书，核对git和证据。后续迁移从004起，不改001/002/003。
-2. P2-02：盘点范围和截点、盲盘/复盘、审批与差异过账。盘点期间合法收发/搬运必须被截点规则处理，不能直接覆盖余额。
-3. 跨仓调拨须独立发出/在途/部分接收/丢损模型，不能把同仓搬运当作跨仓已经完成。
-4. 搬运异常与实体回位、已拣任务换人、汇总后分拣、多包裹/部分履约要先扩状态/逐行过账，严禁双扣。自动补货需真实可配置阈值，当前仅人工发起任务。
-5. P2-03完整OMS/ASN/导入预检/异常/私有附件/导出；P4正式报价和计费需要用户业务规则。P3仅拿到正式协议/权限才实现真实ERP，先只读再沙箱。
-6. P5加强认证、审计、分页、长期负载、监控、实机和库存切换；只在获授权新服务器部署。
+## 运维限制
 
-## 交付与外部限制
+0.4镜像标签已更新，本轮未重新构建容器或生产部署；旧0.1容器/探针为历史证据。缺004健康与认证503。新旧版本安全边界不同：0.3不认识count_only，会把专用盘点账号当普通picker；也不检查测量锁/短少锁，禁止直接回退。停写并保留所有新流水，撤销专用凭证、人工对账或前向修复，无破坏性down。
 
-本轮已推送独立分支`codex/wms-warehouse-movements`，草稿PR：https://github.com/fangmu0713-cyber/wms/pull/1 。未合并主分支、未部署生产。新环境应先检出该分支并核对远程SHA，不再仅从main初始README或旧阶段1包续接；准确提交见git log。
+备份恢复工具检查所有库存锁的ledger投影、count_lines短少锁和ACTIVE任务测量锁，不能只恢复inventory而丢掉盘点元数据。未知响应保留原请求/键；刷新页面丢失客户端内存待确认队列，不能声称持久离线。
 
-环境会重置，不依赖临时路径或旧聊天进程存活。源码包只包含受控源码、测试证据与可用Git历史，不含运行库、令牌、依赖wheels。ERP、服务器/域名、生产部署和设备均仍未授权/验收，不改任何代理VPS、SSH、安全组或外部运行服务。
+无ERP真实授权、生产服务器/域名授权、实物设备验收或上线地址；未操作VPS/SSH/安全组/外部运行服务。继续更新原草稿PR，未获指示不合并或部署。源码包只含受控源码、证据和可用Git历史，不含运行数据库、凭证或依赖wheels。

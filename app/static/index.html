@@ -8,6 +8,7 @@
   <title>Atlas · 海外仓作业台</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/warehouse-config.js" defer></script>
+  <script src="/static/count-config.js" defer></script>
   <script src="/static/app.js" defer></script>
 </head>
 <body>
@@ -22,6 +23,7 @@
       <button class="nav-item" data-view="orders"><span aria-hidden="true">▤</span><span data-i18n="orders">订单管理</span></button>
       <button class="nav-item" data-view="waves" hidden><span aria-hidden="true">≋</span><span data-i18n="waves">波次与拣货任务</span></button>
       <button class="nav-item" data-view="movements" hidden><span aria-hidden="true">⇢</span><span data-i18n="movements">补货与移位</span></button>
+      <button class="nav-item" data-view="counts" hidden><span aria-hidden="true">▧</span><span data-i18n="counts">盘点与复盘</span></button>
       <button class="nav-item" data-view="pda"><span aria-hidden="true">⌗</span><span data-i18n="pda">PDA 扫码作业</span></button>
       <button class="nav-item" data-view="inventory"><span aria-hidden="true">▥</span><span data-i18n="inventory">库存与流水</span></button>
       <button class="nav-item" data-view="returns"><span aria-hidden="true">↶</span><span data-i18n="returns">退货处理</span></button>
@@ -47,6 +49,7 @@
         <form id="login-form"><label for="api-token" data-i18n="accessToken">访问令牌</label><input id="api-token" name="token" type="password" required autocomplete="off" spellcheck="false" placeholder="Bearer token"><button class="button" type="submit" data-i18n="connect">连接工作空间</button></form>
       </section>
       <div id="connected-content" hidden>
+        <section data-panel="counts" hidden><div id="count-help" class="section-note"></div><div id="count-forms" class="forms-grid"></div><article class="card" id="count-session-card"><h2 data-i18n="countSessions"></h2><div id="count-session-records"></div></article><article class="card" id="count-lines-card"><h2 data-i18n="countLines"></h2><div id="count-line-records"></div></article><article class="card"><h2 id="count-attempt-heading"></h2><div id="count-attempt-records"></div></article></section>
         <section data-panel="waves" hidden><div class="section-note" data-i18n="waveHelp"></div><div id="wave-forms" class="forms-grid"></div><article class="card"><h2 data-i18n="waves"></h2><div id="wave-records"></div></article><article class="card"><h2 data-i18n="pickTasks"></h2><div id="task-records"></div></article></section>
         <section data-panel="movements" hidden><div class="section-note" data-i18n="movementHelp"></div><div id="movement-forms" class="forms-grid"></div><article class="card"><h2 data-i18n="movementRecords"></h2><div id="movement-records"></div></article></section>
 

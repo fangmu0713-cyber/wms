@@ -56,13 +56,17 @@ def same_owner(obj, owner_id):
         fail('resource_owner_mismatch',422)
 
 
-def stock(db, actor, key, inventory, source, event, on_hand=0, reserved=0, picked=0, move_reserved=0, in_transit=0):
-    changed = db.execute('''UPDATE inventory SET on_hand=on_hand+?,reserved=reserved+?,picked=picked+?,move_reserved=move_reserved+?
+def stock(db, actor, key, inventory, source, event, on_hand=0, reserved=0, picked=0, move_reserved=0, in_transit=0, count_reserved=0, count_line_id=None):
+    lock = db.execute('SELECT line_id FROM count_locks WHERE inventory_id=?',(inventory['id'],)).fetchone()
+    if lock and lock['line_id'] != count_line_id:
+        fail('inventory_locked_for_count')
+    changed = db.execute('''UPDATE inventory SET on_hand=on_hand+?,reserved=reserved+?,picked=picked+?,move_reserved=move_reserved+?,count_reserved=count_reserved+?
         WHERE id=? AND tenant_id=? AND on_hand+?>=0 AND reserved+?>=0
-        AND move_reserved+?>=0 AND reserved+?+move_reserved+?<=on_hand+?
+        AND move_reserved+?>=0 AND count_reserved+?>=0
+        AND reserved+?+move_reserved+?+count_reserved+?<=on_hand+?
         AND picked+?>=0 AND picked+?<=reserved+?''',
-        (on_hand,reserved,picked,move_reserved,inventory['id'],actor['tenant_id'],on_hand,reserved,
-         move_reserved,reserved,move_reserved,on_hand,picked,picked,reserved)).rowcount
+        (on_hand,reserved,picked,move_reserved,count_reserved,inventory['id'],actor['tenant_id'],on_hand,reserved,
+         move_reserved,count_reserved,reserved,move_reserved,count_reserved,on_hand,picked,picked,reserved)).rowcount
     if changed != 1:
         fail('insufficient_or_inconsistent_stock')
     insert(db,'ledger',{'tenant_id':actor['tenant_id'],
@@ -70,6 +74,7 @@ def stock(db, actor, key, inventory, source, event, on_hand=0, reserved=0, picke
         'inventory_id':inventory['id'],'event_type':event,'source_id':source,
         'on_hand_delta':on_hand,'reserved_delta':reserved,'picked_delta':picked,
         'move_reserved_delta':move_reserved,'in_transit_delta':in_transit,
+        'count_reserved_delta':count_reserved,
         'actor_id':actor['id'],'idempotency_key':key,'created_at':now()})
 
 
@@ -166,10 +171,11 @@ def order_action(db, actor, key, object_id, action, data, task_id=None):
             fail('reserve_requires_created_order')
         for line in order_lines:
             remaining = line['qty']
-            rows = db.execute('''SELECT * FROM inventory WHERE tenant_id=? AND owner_id=? AND warehouse_id=? AND sku_id=? AND on_hand>reserved+move_reserved ORDER BY location_id''',
+            rows = db.execute('''SELECT * FROM inventory WHERE tenant_id=? AND owner_id=? AND warehouse_id=? AND sku_id=? AND on_hand>reserved+move_reserved+count_reserved
+                AND NOT EXISTS (SELECT 1 FROM count_locks WHERE inventory_id=inventory.id) ORDER BY location_id''',
                 (actor['tenant_id'],order['owner_id'],order['warehouse_id'],line['sku_id'])).fetchall()
             for inv in rows:
-                qty = min(remaining,inv['on_hand']-inv['reserved']-inv['move_reserved'])
+                qty = min(remaining,inv['on_hand']-inv['reserved']-inv['move_reserved']-inv['count_reserved'])
                 if not qty:
                     continue
                 stock(db,actor,key,inv,object_id,'RESERVE',reserved=qty)
@@ -255,6 +261,9 @@ def create_fee(db, actor, data):
 
 
 def snapshot(db, actor):
+    from . import stock_counts
+    if actor['count_only']:
+        return stock_counts.blind_snapshot(db,actor)
     result = {}
     for table in ('owners','warehouses','locations','skus','stores','receipts','orders','inventory','ledger','returns','fees'):
         rows = db.execute(f'SELECT * FROM {table} WHERE tenant_id=? ORDER BY rowid DESC',(actor['tenant_id'],)).fetchall()
@@ -274,9 +283,13 @@ def snapshot(db, actor):
         result['wave_orders'] = [dict(r) for r in db.execute('SELECT wo.* FROM wave_orders wo JOIN waves w ON w.id=wo.wave_id WHERE w.tenant_id=?',(actor['tenant_id'],)) if r['wave_id'] in wave_ids]
     movements = [dict(r) for r in db.execute('SELECT * FROM movements WHERE tenant_id=? ORDER BY created_at,id',(actor['tenant_id'],)) if visible(db,actor,r)]
     result['movements'] = movements if actor['role'] in ('admin','staff','picker','receiver') else []
+    counts,count_lines = stock_counts.snapshot(db,actor)
+    result.update(counts)
+    locked_ids = {r['inventory_id'] for r in db.execute('SELECT c.inventory_id FROM count_locks c JOIN inventory i ON i.id=c.inventory_id WHERE i.tenant_id=?',(actor['tenant_id'],))}
     for inv in result['inventory']:
-        inv['available'] = inv['on_hand'] - inv['reserved'] - inv['move_reserved']
-    result['reconciliation'] = reconcile(result,movements)
+        inv['count_locked'] = inv['id'] in locked_ids
+        inv['available'] = 0 if inv['count_locked'] else inv['on_hand'] - inv['reserved'] - inv['move_reserved'] - inv['count_reserved']
+    result['reconciliation'] = reconcile(result,movements,count_lines)
     result['stock_summary'] = quality_summary(result,movements)
     return result
 
@@ -288,12 +301,12 @@ def quality_summary(snapshot, movements=()):
         key = tuple(row[k] for k in ('owner_id','warehouse_id','sku_id'))
         if key not in groups:
             groups[key] = {k:row[k] for k in ('owner_id','warehouse_id','sku_id')} | {
-                'on_hand':0,'reserved':0,'picked':0,'move_reserved':0,'available':0,'in_transit':0,
+                'on_hand':0,'reserved':0,'picked':0,'move_reserved':0,'count_reserved':0,'available':0,'in_transit':0,
                 'pending_qc':0,'qualified_unstored':0,'rejected':0,'physical_total':0}
         return groups[key]
     for row in snapshot['inventory']:
         summary = group(row)
-        for k in ('on_hand','reserved','picked','move_reserved','available'):
+        for k in ('on_hand','reserved','picked','move_reserved','count_reserved','available'):
             summary[k] += row[k]
     for movement in movements:
         if movement['status']=='IN_TRANSIT':
@@ -313,17 +326,21 @@ def quality_summary(snapshot, movements=()):
     return list(groups.values())
 
 
-def reconcile(snapshot, movements=()):
+def reconcile(snapshot, movements=(), count_lines=()):
     issues = []
     sums = {}
     allocations = {}
     movement_holds, transit = {}, {}
+    count_holds = {}
+    for line in count_lines:
+        if line['active']:
+            count_holds[line['inventory_id']] = count_holds.get(line['inventory_id'],0)+line['hold_qty']
     for movement in movements:
         if movement['status'] in ('PLANNED','CLAIMED'):
             movement_holds[movement['source_inventory_id']] = movement_holds.get(movement['source_inventory_id'],0)+movement['qty']
     for entry in snapshot['ledger']:
-        values = sums.setdefault(entry['inventory_id'],[0,0,0,0])
-        for i,k in enumerate(('on_hand_delta','reserved_delta','picked_delta','move_reserved_delta')):
+        values = sums.setdefault(entry['inventory_id'],[0,0,0,0,0])
+        for i,k in enumerate(('on_hand_delta','reserved_delta','picked_delta','move_reserved_delta','count_reserved_delta')):
             values[i] += entry[k]
         transit[entry['source_id']] = transit.get(entry['source_id'],0)+entry['in_transit_delta']
     for entry in snapshot['allocations']:
@@ -332,12 +349,14 @@ def reconcile(snapshot, movements=()):
             values[0] += entry['qty']
             values[1] += entry['picked_qty']
     for inv in snapshot['inventory']:
-        if [inv['on_hand'],inv['reserved'],inv['picked'],inv['move_reserved']] != sums.get(inv['id'],[0,0,0,0]):
+        if [inv['on_hand'],inv['reserved'],inv['picked'],inv['move_reserved'],inv['count_reserved']] != sums.get(inv['id'],[0,0,0,0,0]):
             issues.append({'inventory_id':inv['id'],'reason':'ledger_balance_mismatch'})
         if [inv['reserved'],inv['picked']] != allocations.get(inv['id'],[0,0]):
             issues.append({'inventory_id':inv['id'],'reason':'allocation_balance_mismatch'})
         if inv['move_reserved'] != movement_holds.get(inv['id'],0):
             issues.append({'inventory_id':inv['id'],'reason':'movement_hold_mismatch'})
+        if inv['count_reserved'] != count_holds.get(inv['id'],0):
+            issues.append({'inventory_id':inv['id'],'reason':'count_hold_mismatch'})
     for movement in movements:
         expected = movement['qty'] if movement['status']=='IN_TRANSIT' else 0
         if transit.get(movement['id'],0) != expected:

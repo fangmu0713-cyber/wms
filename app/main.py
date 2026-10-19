@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request, Depends, Header
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import HTTPBearer
 from fastapi.staticfiles import StaticFiles
-from . import db as database, models, service, waves, movements
+from . import db as database, models, service, waves, movements, stock_counts
 from .auth import digest
 
 LOG = logging.getLogger('wms')
@@ -30,12 +30,16 @@ def authenticate(db, request):
         service.fail('invalid_or_revoked_token',401)
     if row['expires_at'] and datetime.fromisoformat(row['expires_at'])<=datetime.now(timezone.utc):
         service.fail('token_expired',401)
-    return dict(row)
+    actor = dict(row)
+    if 'count_only' not in actor:
+        service.fail('database_migrations_required',503)
+    stock_counts.restrict(actor,request.method,request.url.path)
+    return actor
 
 
 def create_app(db_path=None):
     path = str(db_path or database.default_path())
-    app = FastAPI(title='Overseas WMS / OMS',version='0.3.0',docs_url=None,redoc_url=None,description='Internal WMS API; no third-party ERP is enabled. Mutations require Idempotency-Key. Quantities are units, money BRL cents.')
+    app = FastAPI(title='Overseas WMS / OMS',version='0.4.0',docs_url=None,redoc_url=None,description='Internal WMS API; no third-party ERP is enabled. Mutations require Idempotency-Key. Quantities are units, money BRL cents.')
     app.state.db_path = path
     failures = defaultdict(deque)
     security = HTTPBearer(auto_error=False)
@@ -120,6 +124,23 @@ def create_app(db_path=None):
     add_post('/api/fees',models.Fee,lambda db,a,k,d:service.create_fee(db,a,d))
     add_post('/api/waves',models.Wave,lambda db,a,k,d:waves.create(db,a,d))
     add_post('/api/movements',models.Movement,lambda db,a,k,d:movements.create(db,a,k,d))
+    add_post('/api/stock_counts',models.StockCount,lambda db,a,k,d:stock_counts.create(db,a,d))
+
+    def add_count_action(table, action, model):
+        def endpoint(object_id: str, request: Request, payload: model):
+            def operation(db,a,k,d):
+                if table=='stock_counts':
+                    return stock_counts.review(db,a,k,object_id,action,d)
+                if table=='count_lines':
+                    return stock_counts.recount(db,a,object_id,d)
+                return stock_counts.submit(db,a,k,object_id,d)
+            return execute(request,payload.model_dump(),operation)
+        app.add_api_route('/api/'+table+'/{object_id}/'+action,endpoint,methods=['POST'],name=table+'_'+action,dependencies=[Depends(security),Depends(require_idempotency)])
+
+    add_count_action('count_attempts','submit',models.CountScan)
+    add_count_action('count_lines','recount',models.Recount)
+    for action in ('approve','cancel'):
+        add_count_action('stock_counts',action,models.CountReview)
 
     def add_movement_action(action, model):
         def endpoint(object_id: str, request: Request, payload: model):
@@ -160,7 +181,7 @@ def create_app(db_path=None):
         with database.transaction(path) as db:
             actor = authenticate(db,request)
             service.insert(db,'audit',{'tenant_id':actor['tenant_id'],'actor_id':actor['id'],'action':'AUTHENTICATED_SESSION','resource_id':actor['id'],'idempotency_key':'','created_at':service.now()})
-            return {k:actor[k] for k in ('id','tenant_id','role','owner_id','name')}
+            return {k:actor[k] for k in ('id','tenant_id','role','owner_id','name','count_only')}
 
     @app.get('/api/snapshot',dependencies=[Depends(security)])
     def snapshot(request: Request):
@@ -182,9 +203,13 @@ def create_app(db_path=None):
                     service.permit(actor,'staff','picker')
                 if table=='movements':
                     service.permit(actor,*movements.EXECUTION_ROLES)
+                if table=='count_attempts':
+                    return stock_counts.get_attempt(db,actor,object_id)
+                if table in ('stock_counts','count_lines'):
+                    service.permit(actor,'staff')
                 return service.get(db,actor,table,object_id)
         app.add_api_route('/api/'+table+'/{object_id}',endpoint,methods=['GET'],name=table+'_get',dependencies=[Depends(security)])
-    for table in ('owners','warehouses','locations','skus','stores','receipts','orders','inventory','ledger','returns','fees','waves','pick_tasks','movements'):
+    for table in ('owners','warehouses','locations','skus','stores','receipts','orders','inventory','ledger','returns','fees','waves','pick_tasks','movements','stock_counts','count_lines','count_attempts'):
         add_get(table)
 
     @app.get('/health')

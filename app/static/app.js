@@ -61,6 +61,7 @@ function updateRefreshLabel() {
   $("#last-refresh").textContent = lastRefreshed ? `${t("updated")} ${new Intl.DateTimeFormat(language, {dateStyle:"short", timeStyle:"medium", timeZone:"Asia/Shanghai"}).format(lastRefreshed)} · Asia/Shanghai` : t("awaitConnection");
 }
 function showView(view) {
+  if (user?.count_only) view = "counts";
   currentView = descriptions[view] ? view : "overview";
   document.querySelectorAll("[data-panel]").forEach(el => { el.hidden = el.dataset.panel !== currentView; });
   document.querySelectorAll("[data-view]").forEach(el => { const active = el.dataset.view === currentView; el.classList.toggle("active", active); if (active) el.setAttribute("aria-current", "page"); else el.removeAttribute("aria-current"); });
@@ -146,8 +147,11 @@ function buildForms() {
   addOrderLine();
 }
 function populateSelects(root = document) {
+  $('[data-view="counts"]').hidden = !user || (!user.count_only && !["admin","staff"].includes(user.role));
+  document.querySelectorAll("[data-mode]").forEach(button => { button.disabled = Boolean(user?.count_only); });
   $('[data-view="waves"]').hidden = !user || !["admin","staff","picker"].includes(user.role);
   $('[data-view="movements"]').hidden = !user || !["admin","staff","picker","receiver"].includes(user.role);
+  if (user?.count_only) document.querySelectorAll("[data-view]").forEach(button => { button.hidden = button.dataset.view !== "counts"; });
   root.querySelectorAll("select[data-options]").forEach(selectEl => [...selectEl.options].forEach(option => { option.textContent = t(option.value); }));
   root.querySelectorAll("select[data-source]").forEach(selectEl => {
     const previous = selectEl.value, statuses = selectEl.dataset.statuses?.split(","), selected = new Set([...selectEl.selectedOptions].map(option => option.value));
@@ -158,6 +162,12 @@ function populateSelects(root = document) {
     if (selectEl.name === "order_ids") items = items.filter(item => (!ownerId || item.owner_id === ownerId) && (!warehouseId || item.warehouse_id === warehouseId) && !array("wave_orders").some(link => link.order_id === item.id && link.active));
     if (selectEl.dataset.source === "pick_tasks" && ["task-scan-form","task-release-form"].includes(form?.id)) items = items.filter(item => item.assignee_id === user?.id && (form.id !== "task-release-form" || item.picked_qty === 0));
     if (form?.id === "pick-form" && selectEl.name === "order_id") items = items.filter(item => !array("wave_orders").some(link => link.order_id === item.id && link.active));
+    if (selectEl.name === "location_ids" && warehouseId) items = items.filter(item => item.warehouse_id === warehouseId);
+    if (selectEl.dataset.source === "count_operators") {
+      const lineId = form?.querySelector('[name="line_id"]')?.value, line = array("count_lines").find(item => item.id === lineId), scopeWarehouse = warehouseId || line?.warehouse_id;
+      if (scopeWarehouse) items = items.filter(item => item.warehouse_id === scopeWarehouse);
+      items = [...new Map(items.map(item => [item.id,item])).values()];
+    }
     if (selectEl.name === "source_inventory_id") items = items.filter(item => item.available > 0);
     if (selectEl.name === "destination_location_id") { const sourceId = form?.querySelector('[name="source_inventory_id"]')?.value, source = array("inventory").find(item => item.id === sourceId); if (source) items = items.filter(item => item.warehouse_id === source.warehouse_id && item.id !== source.location_id); }
     if (selectEl.dataset.source === "movements" && ["movement-dispatch-form","movement-receive-form","movement-release-form"].includes(form?.id)) items = items.filter(item => item.assignee_id === user?.id);
@@ -165,6 +175,8 @@ function populateSelects(root = document) {
     if (selectEl.multiple) selectEl.replaceChildren();
     items.forEach(record => {
       let label = recordLabel(record);
+      if (selectEl.dataset.source === "count_attempts") label = `${shortLookup("owners",record.owner_id)} · ${shortLookup("locations",record.location_id)} · ${shortLookup("skus",record.sku_id)} · ${t("round")}: ${record.round} · ${record.id}`;
+      if (selectEl.dataset.source === "count_lines") label = `${shortLookup("stock_counts",record.session_id)} · ${shortLookup("locations",record.location_id)} · ${record.id}`;
       if (selectEl.dataset.source === "inventory") label = `${shortLookup("owners",record.owner_id)} · ${shortLookup("warehouses",record.warehouse_id)} · ${shortLookup("skus",record.sku_id)} · ${shortLookup("locations",record.location_id)} · ${t("available")}: ${record.available}`;
       if (selectEl.dataset.source === "pick_tasks") label = `${shortLookup("waves",record.wave_id)} · #${record.sequence} · ${shortLookup("orders",record.order_id)} · ${shortLookup("locations",record.location_id)} · ${shortLookup("skus",record.sku_id)} · ${record.picked_qty}/${record.qty}`;
       const option = node("option",label); option.value = record.id; if (selectEl.multiple) option.selected = selected.has(record.id); selectEl.append(option);
@@ -173,7 +185,7 @@ function populateSelects(root = document) {
     if (items.some(item => item.id === previous)) selectEl.value = previous;
     else if (items.length === 1) selectEl.value = items[0].id;
   });
-  schemas.forEach(schema => { const card = document.querySelector(`[data-schema="${schema.id}"]`); card.hidden = Boolean(user && user.role !== "admin" && !actionRoles[schema.id].includes(user.role)); });
+  schemas.forEach(schema => { const card = document.querySelector(`[data-schema="${schema.id}"]`); card.hidden = Boolean(user && (user.count_only ? schema.id !== "count-submit" : schema.id === "count-submit" || (user.role !== "admin" && !actionRoles[schema.id].includes(user.role)))); });
 }
 async function submitForm(form,schema) {
   if (!token) { message(t("needLogin"),true); return; }
@@ -198,10 +210,11 @@ function rowTimezone(record) { return array("warehouses").find(item => item.id =
 function shortLookup(key,id) { const row = array(key).find(item => item.id === id); return row ? row.name || row.code || row.reference || row.id : id; }
 function formatValue(key,value,record = {},compact = false) {
   if (value === undefined || value === null || value === "") return "—";
-  const linked = {owner_id:"owners",warehouse_id:"warehouses",sku_id:"skus",location_id:"locations",store_id:"stores",order_id:"orders",wave_id:"waves",source_location_id:"locations",destination_location_id:"locations"};
+  const linked = {owner_id:"owners",warehouse_id:"warehouses",sku_id:"skus",location_id:"locations",store_id:"stores",order_id:"orders",wave_id:"waves",session_id:"stock_counts",counter_id:"count_operators",source_location_id:"locations",destination_location_id:"locations"};
   if (linked[key]) return compact ? shortLookup(linked[key],value) : lookup(linked[key],value);
   if (key === "assignee_id" && value === user?.id) return user.name;
   if (key === "kind") return t(value);
+  if (key === "count_locked") return t(value ? "locked" : "unlocked");
   if (key === "amount_cents") return new Intl.NumberFormat(language,{style:"currency",currency:"BRL"}).format(value / 100);
   if (key.endsWith("_at")) { const date = new Date(value); if (!Number.isNaN(date.getTime())) return new Intl.DateTimeFormat(language,{dateStyle:"short",timeStyle:"short",timeZone:rowTimezone(record)}).format(date); }
   if (typeof value === "object") return JSON.stringify(value);
@@ -212,10 +225,17 @@ function table(target,rows,columns) {
   if (!rows.length) { el.append(node("div",t("empty"),"empty")); return; }
   const wrap = node("div",undefined,"table-wrap"), tableEl = document.createElement("table"), head = document.createElement("thead"), header = document.createElement("tr");
   columns.forEach(key => { const th = node("th",t(key === "amount_cents" ? "amount" : key)); th.scope = "col"; header.append(th); }); head.append(header); tableEl.append(head);
-  const tbody = document.createElement("tbody"); rows.forEach(record => { const row = document.createElement("tr"); if (record.id) row.dataset.recordId = record.id; columns.forEach(key => { const cell = document.createElement("td"); if (key === "status") { cell.append(node("span",statusLabel(record[key] || "—"),`badge status${["CANCELLED","EXPECTED"].includes(record[key]) ? " pending" : ""}`)); } else { cell.textContent = formatValue(key,record[key],record,["wave-records","task-records","movement-records"].includes(el.id)); if (key === "id") cell.className = "id-cell"; if (key.endsWith("_at")) cell.title = rowTimezone(record); } cell.dataset.column = key; row.append(cell); }); tbody.append(row); }); tableEl.append(tbody); wrap.append(tableEl); el.append(wrap);
+  const tbody = document.createElement("tbody"); rows.forEach(record => { const row = document.createElement("tr"); if (record.id) row.dataset.recordId = record.id; columns.forEach(key => { const cell = document.createElement("td"); if (key === "status") { cell.append(node("span",statusLabel(record[key] || "—"),`badge status${["CANCELLED","EXPECTED"].includes(record[key]) ? " pending" : ""}`)); } else { cell.textContent = formatValue(key,record[key],record,["wave-records","task-records","movement-records","count-session-records","count-line-records","count-attempt-records"].includes(el.id)); if (key === "id") cell.className = "id-cell"; if (key.endsWith("_at")) cell.title = rowTimezone(record); } cell.dataset.column = key; row.append(cell); }); tbody.append(row); }); tableEl.append(tbody); wrap.append(tableEl); el.append(wrap);
 }
 function renderData() {
   if (!snapshot) return;
+  $("#count-help").textContent = t(user?.count_only ? "blindCountHelp" : "countHelp");
+  $("#count-attempt-heading").textContent = t(user?.count_only ? "blindCountTasks" : "countAttempts");
+  $("#count-session-card").hidden = Boolean(user?.count_only); $("#count-lines-card").hidden = Boolean(user?.count_only);
+  table("#count-session-records",array("stock_counts"),["reference","owner_id","warehouse_id","sku_id","status","id"]);
+  table("#count-line-records",array("count_lines"),["session_id","location_id","status","hold_qty","accepted_delta","id"]);
+  table("#count-attempt-records",array("count_attempts"),user?.count_only ? ["owner_id","location_id","sku_id","round","counted_qty","status","id"] : ["session_id","location_id","counter_id","round","baseline_on_hand","counted_qty","delta","cutoff_seq","status","id"]);
+  if (user?.count_only) return;
   const activeOrders = array("orders").filter(item => !["SHIPPED","CANCELLED"].includes(item.status));
   const inventory = array("inventory"), received = array("receipts").filter(item => item.status !== "PUTAWAY");
   const metrics = [["inboundPending",received.length,"receiptMetric","↙"],["orderActive",activeOrders.length,"orderMetric","↗"],["on_hand",inventory.reduce((sum,item) => sum + item.on_hand,0),"skuMetric","▥"],["available",inventory.reduce((sum,item) => sum + item.available,0),"availableMetric","✓"]];
@@ -234,9 +254,9 @@ function renderData() {
   table("#task-records",array("pick_tasks"),["wave_id","sequence","location_id","sku_id","order_id","qty","picked_qty","status","assignee_id","id"]);
   table("#movement-records",array("movements").slice().reverse(),["reference","kind","source_location_id","destination_location_id","sku_id","qty","status","assignee_id","id"]);
   table("#receipt-records",array("receipts").slice().reverse(),["reference","owner_id","warehouse_id","sku_id","qty","accepted_qty","rejected_qty","status","id"]);
-  table("#inventory-records",inventory,["owner_id","warehouse_id","sku_id","location_id","on_hand","reserved","picked","move_reserved","available"]);
-  table("#stock-quality-records",array("stock_summary"),["owner_id","warehouse_id","sku_id","on_hand","move_reserved","in_transit","pending_qc","qualified_unstored","rejected","physical_total"]);
-  const ledgerCols = ["created_at","owner_id","warehouse_id","sku_id","location_id","event_type","on_hand_delta","reserved_delta","picked_delta","move_reserved_delta","in_transit_delta","source_id","id"];
+  table("#inventory-records",inventory,["owner_id","warehouse_id","sku_id","location_id","on_hand","reserved","picked","move_reserved","count_reserved","count_locked","available"]);
+  table("#stock-quality-records",array("stock_summary"),["owner_id","warehouse_id","sku_id","on_hand","move_reserved","count_reserved","in_transit","pending_qc","qualified_unstored","rejected","physical_total"]);
+  const ledgerCols = ["created_at","owner_id","warehouse_id","sku_id","location_id","event_type","on_hand_delta","reserved_delta","picked_delta","move_reserved_delta","count_reserved_delta","in_transit_delta","source_id","id"];
   const ledgerRows = array("ledger").map(item => ({...item,event_type:item.event_type || item.type || item.kind,on_hand_delta:item.on_hand_delta ?? item.delta_on_hand ?? item.delta,reserved_delta:item.reserved_delta ?? item.delta_reserved,picked_delta:item.picked_delta ?? item.delta_picked,source_id:item.source_id || item.reference_id || item.event_id}));
   table("#ledger-records",ledgerRows.slice().reverse(),ledgerCols);
   const masterRecords = $("#master-records"); masterRecords.replaceChildren();
@@ -265,14 +285,17 @@ function renderIntegrations() {
   });
 }
 function renderRoadmap() {
-  const rows = [["coreScope","coreScopeHelp","implemented"],["extendedScope","extendedScopeHelp","implemented"],["waveScope","waveHelp","implemented"],["moveScope","moveScopeHelp","implemented"],["efficiencyScope","efficiencyScopeHelp","unsupported"],["financeScope",null,"unsupported"],["advancedScope",null,"unsupported"],["devicesScope",null,"devicePending"],["productionScope","productionHelp","pendingAuthorization"]];
+  const rows = [["coreScope","coreScopeHelp","implemented"],["extendedScope","extendedScopeHelp","implemented"],["waveScope","waveHelp","implemented"],["moveScope","moveScopeHelp","implemented"],["countScope","countScopeHelp","implemented"],["efficiencyScope","efficiencyScopeHelp","unsupported"],["financeScope",null,"unsupported"],["advancedScope",null,"unsupported"],["devicesScope",null,"devicePending"],["productionScope","productionHelp","pendingAuthorization"]];
   $("#roadmap-records").replaceChildren(...rows.map(([title,help,status]) => { const row = node("div",undefined,"roadmap-row"), text = node("div"); text.append(node("strong",t(title))); if (help) text.append(node("p",t(help))); row.append(text,node("span",t(status),`badge${status === "implemented" ? "" : " warning"}`)); return row; }));
 }
 function logout() {
   $('[data-view="waves"]').hidden = true; $('[data-view="movements"]').hidden = true;
   ["#wave-records","#task-records","#movement-records"].forEach(selector => $(selector).replaceChildren());
-  showView("overview");
   sessionVersion++; token = ""; user = null; snapshot = null; lastRefreshed = null; $("#api-token").value = ""; $("#connected-content").hidden = true; $("#login-panel").hidden = false; $("#logout").hidden = true; $("#identity").textContent = t("disconnected"); $("#refresh").disabled = true;
+  document.querySelectorAll("[data-view]").forEach(button => { button.hidden = ["counts","waves","movements"].includes(button.dataset.view); });
+  document.querySelectorAll("[data-mode]").forEach(button => { button.disabled = false; });
+  ["#count-session-records","#count-line-records","#count-attempt-records"].forEach(selector => $(selector).replaceChildren());
+  showView("overview");
   document.querySelectorAll(".form-result").forEach(el => { el.textContent = ""; delete el.dataset.recordId; delete el.dataset.recordStatus; });
   document.querySelectorAll(".business-form").forEach(form => { submissions.delete(form); form.reset(); form.querySelectorAll("input,select,button").forEach(control => { control.disabled = false; }); const submit = form.querySelector('[type="submit"]'); submit.dataset.i18n = "submit"; submit.textContent = t("submit"); });
   document.querySelectorAll("select[data-source]").forEach(el => el.replaceChildren());
@@ -281,7 +304,7 @@ function logout() {
 }
 buildForms(); translate();
 document.addEventListener("click",event => { const view = event.target.closest("[data-view],[data-go]"); if (view) showView(view.dataset.view || view.dataset.go); const mode = event.target.closest("[data-mode]"); if (mode) { document.querySelectorAll("[data-mode]").forEach(el => el.classList.toggle("active",el === mode)); showView(mode.dataset.mode === "pda" ? "pda" : mode.dataset.mode === "oms" ? "orders" : "overview"); } });
-document.addEventListener("change",event => { if (["owner_id","warehouse_id","source_inventory_id"].includes(event.target.name) && snapshot) populateSelects(event.target.closest("form")); });
+document.addEventListener("change",event => { if (["owner_id","warehouse_id","source_inventory_id","line_id"].includes(event.target.name) && snapshot) populateSelects(event.target.closest("form")); });
 $("#language").addEventListener("change",event => { language = event.target.value; translate(); });
 $("#logout").addEventListener("click",logout);
 $("#refresh").addEventListener("click",async () => { try { await refresh(); $("#notice").hidden = true; } catch (error) { message(error.message,true); } });
@@ -292,7 +315,7 @@ $("#login-form").addEventListener("submit",async event => {
     await refresh(); $("#login-panel").hidden = true; $("#connected-content").hidden = false; $("#logout").hidden = false; $("#identity").textContent = `${user.name} · ${user.role}`; $("#notice").hidden = true;
     const preferredMode = user.role.startsWith("owner") ? "oms" : "wms";
     document.querySelectorAll("[data-mode]").forEach(el => el.classList.toggle("active",el.dataset.mode === preferredMode));
-    if (preferredMode === "oms") showView("orders");
+    if (user.count_only) showView("counts"); else if (preferredMode === "oms") showView("orders");
   } catch (error) { token = ""; user = null; snapshot = null; $("#refresh").disabled = true; message(error.message,true); }
   finally { button.disabled = false; button.textContent = t("connect"); }
 });

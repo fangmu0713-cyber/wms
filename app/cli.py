@@ -21,6 +21,7 @@ def main():
     user.add_argument('--name',required=True)
     user.add_argument('--role',choices=['admin','staff','owner','owner_readonly','receiver','picker','packer','finance'],required=True)
     user.add_argument('--owner-id')
+    user.add_argument('--count-only',action='store_true',help='Blind-count-only picker credential; no inventory/business reads')
     user.add_argument('--warehouse-id',action='append',default=[])
     user.add_argument('--output',required=True)
     revoke = commands.add_parser('revoke')
@@ -38,7 +39,7 @@ def main():
         fd = os.open(output,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
         try:
             result = provision(args.db,args.tenant if args.command=='bootstrap' else '',args.name,
-                **({} if args.command=='bootstrap' else {'tenant_id':args.tenant_id,'role':args.role,'owner_id':args.owner_id,'warehouse_ids':args.warehouse_id}))
+                **({} if args.command=='bootstrap' else {'tenant_id':args.tenant_id,'role':args.role,'owner_id':args.owner_id,'warehouse_ids':args.warehouse_id,'count_only':args.count_only}))
             with os.fdopen(fd,'w') as stream:
                 fd = None
                 json.dump(result,stream)

@@ -1,0 +1,46 @@
+test_chinese_full_flow_portuguese_and_mobile (__main__.BrowserBusinessFlow.test_chinese_full_flow_portuguese_and_mobile) ... api_request status=200 duration_ms=15.6
+api_request status=200 duration_ms=52.9
+api_request status=200 duration_ms=5.5
+api_request status=200 duration_ms=2.8
+api_request status=200 duration_ms=4.2
+api_request status=200 duration_ms=5.3
+api_request status=200 duration_ms=9.4
+api_request status=200 duration_ms=5.9
+api_request status=200 duration_ms=6.6
+api_request status=200 duration_ms=19.1
+api_request status=200 duration_ms=4.5
+api_request status=200 duration_ms=7.8
+api_request status=200 duration_ms=11.7
+api_request status=200 duration_ms=27.9
+api_request status=200 duration_ms=3.0
+api_request status=200 duration_ms=6.9
+api_request status=200 duration_ms=3.8
+api_request status=200 duration_ms=6.8
+api_request status=200 duration_ms=7.2
+api_request status=200 duration_ms=11.0
+api_request status=200 duration_ms=9.7
+api_request status=200 duration_ms=4.8
+api_request status=200 duration_ms=9.4
+api_request status=200 duration_ms=3.7
+api_request status=200 duration_ms=10.5
+api_request status=200 duration_ms=40.7
+api_request status=200 duration_ms=8.1
+api_request status=200 duration_ms=4.5
+api_request status=200 duration_ms=8.9
+api_request status=200 duration_ms=12.0
+api_request status=200 duration_ms=9.6
+api_request status=200 duration_ms=5.9
+api_request status=200 duration_ms=15.4
+api_request status=200 duration_ms=3.5
+api_request status=200 duration_ms=5.5
+api_request status=200 duration_ms=8.2
+api_request status=200 duration_ms=4.8
+api_request status=200 duration_ms=6.3
+api_request status=200 duration_ms=11.1
+api_request status=200 duration_ms=5.2
+ok
+
+----------------------------------------------------------------------
+Ran 1 test in 12.131s
+
+OK

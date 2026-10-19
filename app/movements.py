@@ -13,7 +13,7 @@ def create(db, actor, key, data):
         s.fail('movement_requires_same_warehouse', 422)
     if source['location_id'] == destination['id']:
         s.fail('movement_requires_different_locations', 422)
-    if data['qty'] > source['on_hand'] - source['reserved'] - source['move_reserved']:
+    if data['qty'] > source['on_hand'] - source['reserved'] - source['move_reserved'] - source['count_reserved']:
         s.fail('insufficient_available_stock_for_movement')
     movement = s.insert(db, 'movements', {
         **{k: source[k] for k in ('tenant_id', 'owner_id', 'warehouse_id', 'sku_id')},

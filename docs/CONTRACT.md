@@ -70,3 +70,41 @@ GET `/api/movements/{id}`及snapshot.movements仅admin/staff/picker/receiver可�
 - 核对：库位on_hand/reserved/picked/move_reserved等于账本累加，订单预占/已拣等于有效分配，move_reserved等于未搬出任务数量，逐任务in_transit_delta累加等于IN_TRANSIT任务qty，否则0。
 
 当前仅整任务数量、同仓、同SKU/货主；不支持部分搬出/接收、损耗、跨仓调拨、搬出后取消/回位/换人。迁移只增量改变003，保留原库存/已拣波次；健康检查必须全部已发布迁移齐全。存在新业务后不能直接回退旧版本代码，不提供破坏性down。
+
+## 0.4 盘点、盲盘凭证与差异审批（004）
+
+盘点范围是一个货主、一个仓库、一个已知SKU及1–100个明确库位，包含该SKU在所选空库位的零余额；不是整仓所有SKU，也不含待检、残次、库内搬运中或尚未归属的商品。盘点为实盘程序，操作员应核对货主标识、SKU和库位，不在测量暂停范围内移入/取出货物。
+
+POST `/api/stock_counts {owner_id,warehouse_id,sku_id,location_ids,reference,counter_id}`：admin/staff。reference在tenant/warehouse唯一，库位不得重复且均同仓，SKU归属货主。创建每行快照baseline_on_hand和只追加ledger的rowid截点cutoff_seq，同事务取得inventory级测量锁。存在订单预占/已拣/待搬、其他盘点差异锁或其他有效盘点行时拒绝，整单原子创建。
+
+### 专用盲盘凭证
+
+users.count_only默认0，不改变原8角色或既有权限。CLI `user --role picker --count-only`单独签发；仅可GET `/api/me`、`/api/snapshot`、本人的`/api/count_attempts/{id}`，以及POST本人的`/api/count_attempts/{id}/submit`。不能读取库存、流水、收发单、费用、别人的读数或主管盘点依据，也不能调用原picker业务写接口。
+
+专用snapshot只含本人任务和对应货主/仓库/SKU/库位主数据；库存、流水、库存汇总、盘点单/行、其他业务和操作员名单数组为空。任务投影只有id、owner/warehouse/SKU/location/session/line、counter_id、round、status、本人counted_qty、created_at/submitted_at；不含baseline、cutoff、delta或短少锁。原键重试响应也使用同一脱敏投影。
+
+admin/staff在snapshot的count_operators查看有仓授权、有效且未撤销的专用盘点账号{id,name,warehouse_id}，可查看盘点单、行和原始实盘依据。其他普通角色的盘点数组为空。服务器区分不同账号，不验证现实人员身份；人员独立性由仓库管理保证。
+
+### 实盘与复盘
+
+POST `/api/count_attempts/{id}/submit {barcode,location_id,qty}`：仅分配到该任务的专用盘点凭证，qty为0–1,000,000严格整数。必须匹配SKU/库位；任务ACTIVE且测量锁与截点均仍有效。提交后读数与截点不可更改/删除，原键可重放，其他新键不得改数。
+
+测量锁暂停该库存的上架、预占、拣货、搬运等数量写入；预占可选其他未暂停库位。snapshot.inventory.count_locked为true时available=0，不能把该暂停余额当成可立即分配。读数提交后释放测量锁，允许合法作业继续。
+
+每次delta=counted_qty−baseline_on_hand。首盘delta=0可CONFIRMED；非零须RECOUNT_REQUIRED。POST `/api/count_lines/{id}/recount {counter_id}`由admin/staff分配另一有效专用账号；不得与最近一次读数账号相同。复盘重新取得当时的账面与流水截点，并暂停该行作业；仍要求无订单/搬运占用（允许本行已有count_reserved）。最近两次不同账号的delta相同才CONFIRMED；不一致继续复盘，比较的是各自截点的差额，不能直接比较两个不同时刻的实盘总数。
+
+短少一经记录即增加inventory.count_reserved及ledger.count_reserved_delta，取历次观察短少最大值保守锁定；复盘期间不因为单次新读数减少锁定。该锁不改变on_hand，但阻止订单/搬运重复占用已知短少数量。除测量暂停外，available=on_hand−reserved−move_reserved−count_reserved。
+
+### 审批与取消
+
+所有行CONFIRMED后盘点单REVIEW。POST `/api/stock_counts/{id}/approve {reason}`仅admin，原因3–500字符；按行在当前on_hand上加accepted_delta，并释放本行count_reserved，写COUNT_ADJUST账本，整单库存/流水/状态/幂等/审计同事务。绝不把当前余额覆盖成历史counted_qty。
+
+例如100账面实盘98（差额−2），期间发3，复盘时账面97实盘95（仍−2），复盘后再发5，审批前账面92，审批后90；不会恢复到95或98。盘后新上架、移位/搬运与已存在预占同样保留，负向差额与锁释放在一次原子库存更新完成。
+
+POST `/api/stock_counts/{id}/cancel {reason}`允许admin/staff在OPEN/REVIEW取消，释放测量锁及差异锁，保留提交证据/审计，不更正实物差异；必须继续调查，不能当作差异已解决。终态不能以新键再审批/取消。
+
+状态：盘点单OPEN→REVIEW→APPROVED或CANCELLED；库位行COUNTING→RECOUNT_REQUIRED/CONFIRMED→APPROVED/CANCELLED；测量任务ACTIVE→SUBMITTED或未提交时CANCELLED。一个库存余额同时最多一个有效盘点行，一行最多一个ACTIVE实盘任务。
+
+核对增加count_reserved投影=账本累加=有效count_lines.hold_qty之和；备份恢复验证该投影和ACTIVE任务的持久测量锁，缺004服务健康/认证返回503。既有用户迁移后count_only=0；专用盘点账号必须明确另行签发。
+
+当前无全仓多SKU自动盘点计划、未标识商品认领、货主自助盘点或跨仓盘点。旧0.3不理解测量锁/count_reserved，且不会强制count_only凭证边界，禁止直接切回旧代码。回退须停写、保留新流水、撤销专用盘点凭证并人工对账，优先前向修复；无破坏性down。

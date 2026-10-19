@@ -72,3 +72,22 @@ WMS_DB_PATH=/tmp/wms-restore.sqlite3 uvicorn app.main:app --host 127.0.0.1 --por
 PDA/手机 390px 页面和键盘扫描输入有自动化浏览器验收；条码枪、相机、蓝牙/网络打印机、电子秤均待实机。步骤：选测试仓/货主，扫描错误条码被拒→正确条码计入→连续提交同幂等键不重复→断网提示未知/失败不报成功→恢复网络以原请求重试→数据库和流水核对。打印/相机/秤当前未实现，不把键盘输入测试称为设备对接。
 
 容器离线构建：在同 Python/系统架构的可联网环境运行 `python -m pip download --only-binary=:all: --dest wheelhouse -r requirements.lock`，再执行 `docker compose build --build-arg WMS_OFFLINE=1`。目录中的 wheels 被 gitignore 排除；跨机使用时重新下载匹配架构 wheel。容器备份可用 `docker compose exec wms python -m app.cli backup --output /data/backup.sqlite3`，然后 `docker compose cp wms:/data/backup.sqlite3 ./var/backup.sqlite3`；在受控独立本机以 restore_check 演练。备份文件不要公开或提交版本库。
+
+## 0.4专用盲盘账号与现场程序
+
+管理员先在受控终端签发两个分别交给不同操作员的专用账号，凭证仅保存在0600文件，不能发到聊天/截图/仓库：
+
+```bash
+python -m app.cli user --tenant-id TENANT_ID --name '初盘员' --role picker --count-only --warehouse-id WAREHOUSE_ID --output var/counter-a.token
+python -m app.cli user --tenant-id TENANT_ID --name '复盘员' --role picker --count-only --warehouse-id WAREHOUSE_ID --output var/counter-b.token
+```
+
+普通picker不自动获得盲盘权限。旧用户迁移后count_only仍为0。专用账号只能看自身盘点任务，不能继续原拣货业务；不要给操作员同时提供能看账面的主管凭证来声称盲盘。人员独立性由现场管理保证。
+
+admin/staff在“盘点与复盘”选货主、仓库、一个SKU和库位范围。先完成/释放这些库存的订单和搬运占用，测量期间暂停所选库存的实物取放；系统API阻断数量变更，其他库存可继续。专用操作员登录后只见自身任务，核对货主标识、SKU、库位和实物数量（允许0），提交后不可改数。
+
+读数提交后测量锁解除，短少count_reserved仍锁定。非零差异由另一账号复盘，复盘重新取得当前截点；若有新订单/搬运占用，先完成该作业再开启复盘。两次不同账号差额一致后admin填写原因审批。后续出库、上架和移位不会被历史数覆盖。
+
+提交结果未知，保持原请求/键重试，不刷新丢失内存队列。服务重启/备份恢复后测量锁、短少锁和分配仍保留。操作员失去访问或现场放弃时，由主管有理由取消整单再重新安排；不能偷偷改既有读数。取消仅释放锁，不解决原实物差异，须保留调查记录。
+
+0.4需004迁移，缺迁移健康/认证503。0.4镜像标签已更新，本轮未重新构建容器、验收实物PDA或部署。旧0.3不认识盘点锁和专用凭证边界，禁止直接回退；停写保留所有新流水，撤销专用凭证并人工对账或前向修复。恢复工具现在检查搬运/盘点锁的账本投影和ACTIVE任务测量锁。

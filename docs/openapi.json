@@ -3,7 +3,7 @@
   "info": {
     "title": "Overseas WMS / OMS",
     "description": "Internal WMS API; no third-party ERP is enabled. Mutations require Idempotency-Key. Quantities are units, money BRL cents.",
-    "version": "0.3.0"
+    "version": "0.4.0"
   },
   "paths": {
     "/api/owners": {
@@ -574,6 +574,312 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Movement"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stock_counts": {
+      "post": {
+        "summary": " Api Stock Counts",
+        "operationId": "_api_stock_counts_api_stock_counts_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockCount"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/count_attempts/{object_id}/submit": {
+      "post": {
+        "summary": "Count Attempts Submit",
+        "operationId": "count_attempts_submit_api_count_attempts__object_id__submit_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "object_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Object Id"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CountScan"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/count_lines/{object_id}/recount": {
+      "post": {
+        "summary": "Count Lines Recount",
+        "operationId": "count_lines_recount_api_count_lines__object_id__recount_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "object_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Object Id"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Recount"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stock_counts/{object_id}/approve": {
+      "post": {
+        "summary": "Stock Counts Approve",
+        "operationId": "stock_counts_approve_api_stock_counts__object_id__approve_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "object_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Object Id"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CountReview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stock_counts/{object_id}/cancel": {
+      "post": {
+        "summary": "Stock Counts Cancel",
+        "operationId": "stock_counts_cancel_api_stock_counts__object_id__cancel_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "object_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Object Id"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CountReview"
               }
             }
           }
@@ -2490,6 +2796,132 @@
         }
       }
     },
+    "/api/stock_counts/{object_id}": {
+      "get": {
+        "summary": "Stock Counts Get",
+        "operationId": "stock_counts_get_api_stock_counts__object_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "object_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Object Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/count_lines/{object_id}": {
+      "get": {
+        "summary": "Count Lines Get",
+        "operationId": "count_lines_get_api_count_lines__object_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "object_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Object Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/count_attempts/{object_id}": {
+      "get": {
+        "summary": "Count Attempts Get",
+        "operationId": "count_attempts_get_api_count_attempts__object_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "object_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Object Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -2509,6 +2941,54 @@
   },
   "components": {
     "schemas": {
+      "CountReview": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "CountReview"
+      },
+      "CountScan": {
+        "properties": {
+          "barcode": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Barcode",
+            "strip_whitespace": true
+          },
+          "location_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Location Id",
+            "strip_whitespace": true
+          },
+          "qty": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Qty"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "barcode",
+          "location_id",
+          "qty"
+        ],
+        "title": "CountScan"
+      },
       "Empty": {
         "properties": {},
         "additionalProperties": false,
@@ -2863,6 +3343,23 @@
         ],
         "title": "Receipt"
       },
+      "Recount": {
+        "properties": {
+          "counter_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Counter Id",
+            "strip_whitespace": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "counter_id"
+        ],
+        "title": "Recount"
+      },
       "Return": {
         "properties": {
           "order_id": {
@@ -2968,6 +3465,68 @@
           "carrier"
         ],
         "title": "Ship"
+      },
+      "StockCount": {
+        "properties": {
+          "owner_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Owner Id",
+            "strip_whitespace": true
+          },
+          "warehouse_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Warehouse Id",
+            "strip_whitespace": true
+          },
+          "sku_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Sku Id",
+            "strip_whitespace": true
+          },
+          "location_ids": {
+            "items": {
+              "type": "string",
+              "maxLength": 160,
+              "minLength": 1,
+              "strip_whitespace": true
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Location Ids"
+          },
+          "reference": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Reference",
+            "strip_whitespace": true
+          },
+          "counter_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Counter Id",
+            "strip_whitespace": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "owner_id",
+          "warehouse_id",
+          "sku_id",
+          "location_ids",
+          "reference",
+          "counter_id"
+        ],
+        "title": "StockCount"
       },
       "Store": {
         "properties": {

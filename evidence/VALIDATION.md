@@ -1,3 +1,36 @@
+# 0.4 截点盘点、盲盘、独立复盘与差异审批
+
+从远程63fb8df同步继续，先回归原44项（5.045s，stage4/baseline-tests.txt）；新增004，001–003保持原字节。所有货主/账号/盘数为独立临时SQLite合成数据，无真实ERP/生产或实物盘点验收。
+
+|命令|最终结果|证据（evidence/stage4）|
+|---|---|---|
+|`python -m unittest discover -s tests -v`|64项通过，18.096s|api-tests.txt|
+|`python -m tests.browser_counts -v`|盲盘/复盘/审批与截点后出库通过，10.555s|count-browser-tests.txt、browser-counts.json、count-*.png|
+|`WMS_WAREHOUSE_EVIDENCE_DIR=evidence/stage4/warehouse python -m tests.browser_warehouse -v`|原波次/搬运浏览器回归通过，11.778s|warehouse-browser-tests.txt、warehouse目录|
+|`WMS_EVIDENCE_DIR=evidence/stage4/legacy python -m tests.browser_flow -v`|原收100→发3→97/BRL/中葡手机回归通过，12.131s|legacy-browser-tests.txt、legacy目录|
+|Python compileall、3个JS语法、git diff --check、001–003无差异|通过|本轮工具exit0|
+
+64项=原44+盘点20；浏览器3项全通过。部分命令并行，时长仅当前环境测试数据，不代表生产性能。TestClient/Chromium需工具network.enabled=true支持本机socket；无新依赖。
+
+## 关键验证
+
+- 100账面初盘98，短少锁2；合法发3后账面97，另一专用账号复盘95（差额仍−2），再发5后账面92，审批只过账−2到90。后续同仓移位10件仍保留，不能覆盖成95或98。
+- 截点后新收3件保留：10初盘8，复盘8后收3，审批后11。已知短少锁阻止订单/搬运超占，审批与锁释放同事务可保留合法预占。
+- 实盘暂停时阻止上架、搬运入位和数量变更；订单可用别的库位。measurement available=0，count_locked明确显示。开盘与末件预占并发最多一个先成功；同库存重叠盘点由唯一约束阻断。
+- 专用count_only只能查/提交自己任务。snapshot、GET和幂等响应不含账面/截点/差额；其他读数ID404，业务API403，普通picker无盘点权限。CLI0600凭证不输出，旧用户升级后不自动变为专用账号。
+- 非零差额需连续两次不同账号一致，复盘不一致继续暂停确认；原始读数/截点SQL改删被拒。零实盘、已知SKU空库位盘盈、多库位范围均验证。
+- 并发审批最多一次调整；同键初盘与审批重复不重复计数。浏览器真实提交/审批已落库但响应丢失，原键重试仅一个COUNT_ADJUST事件。
+- 审批第二行注入真实写失败后整单库存/流水/状态/幂等回滚，解除故障后原键恢复成功。取消释放锁、保留证据，不直接调整物理库存。
+- 003真实旧schema带库内搬运中升级004不丢库存/账本/权限，缺004健康和认证503，重复迁移通过。
+- 备份恢复保留复盘测量锁/短少锁/分配，恢复库可独立完成审批，源不变；损坏count_lines短少元数据时恢复拒绝。旧恢复结果另存stage4/recovery.json，历史证据不覆盖。
+- 中葡桌面1440和手机390，无横向页面溢出（表格内滚动）、JS错误0、localStorage/sessionStorage无业务数据。专用账号只有盲盘作业页，管理员看得到审批依据。
+
+当前范围是单SKU明确库位，不是全仓多SKU计划；系统保证账号不同，不保证现实人员身份。实盘暂停与物理现场程序需仓库执行。0.4容器未重建、无长期负载/设备/生产/ERP新验收。跨仓调拨、自动补货及实体回位仍未实现；旧0.3不执行count_only边界，禁止直接降级。
+
+以下是0.3及阶段1历史记录，不作为0.4容器/负载验收。
+
+---
+
 # 0.3：波次恢复与同仓人工补货/移位验收
 
 本轮从原上传的阶段1bundle恢复a2681d4；上轮a0a955d和生成包不在当前云环境，波次按聊天记录重建并复验，不能声称找回旧提交。先通过阶段1原21项（1.742s）、重建波次后31项（3.433s），再实现003。对应baseline-tests.txt和restored-wave-tests.txt在stage3目录。

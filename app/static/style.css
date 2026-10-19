@@ -7,3 +7,7 @@
 #wave-records table,#movement-records table{min-width:1000px}
 #task-records table{min-width:1500px}
 #wave-records td,#task-records td,#movement-records td{white-space:nowrap;overflow-wrap:normal;word-break:normal}
+
+#count-session-records table,#count-line-records table{min-width:900px}
+#count-attempt-records table{min-width:1000px}
+#count-session-records td,#count-line-records td,#count-attempt-records td{white-space:nowrap;overflow-wrap:normal;word-break:normal}

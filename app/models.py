@@ -94,3 +94,22 @@ class Movement(Input):
     kind: Literal['MOVE', 'REPLENISHMENT']
     reference: Text
     qty: Qty
+
+class StockCount(Input):
+    owner_id: Text
+    warehouse_id: Text
+    sku_id: Text
+    location_ids: Annotated[list[Text], Field(min_length=1, max_length=100)]
+    reference: Text
+    counter_id: Text
+
+class Recount(Input):
+    counter_id: Text
+
+class CountScan(Input):
+    barcode: Text
+    location_id: Text
+    qty: Count
+
+class CountReview(Input):
+    reason: Annotated[str, Field(min_length=3,max_length=500)]

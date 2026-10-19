@@ -34,3 +34,9 @@
 - 仓内任务数据不对货主等非作业角色开放，库存数量汇总仍准确包含自身搬运中实物。错误扫描、状态冲突、权限不足和未知响应均由服务端处理；若响应未知，保留原body/path/key重试。
 
 旧文中“available=on_hand-reserved”仅适用于无搬运锁的阶段1数据，当前口径以上式为准；本轮迁移003给旧记录新增字段默认0。
+
+## 0.4盘点入口
+
+新增stock_counts/count_lines/count_attempts/count_operators；范围为单货主、单仓、单SKU及明确库位。admin/staff建单、安排不同专用账号实盘/复盘；admin填写原因后审批。详见CONTRACT。专用盘点凭证由CLI `user --role picker --count-only`签发，只能读取/提交自己的任务，不能读账面或其他业务数据。
+
+盘点截点只在测量暂停时采集，读数提交即释放测量锁。短少另记count_reserved，其他数量可以正常作业。inventory.count_locked=true时available=0；其他时候available=on_hand−reserved−move_reserved−count_reserved。审批只把差额加到当时余额，保留截点后所有合法流水；不能按历史实盘数覆盖当前库存。本文前面“尚未支持盘点”属于旧版本范围，0.4以上述契约为准。
