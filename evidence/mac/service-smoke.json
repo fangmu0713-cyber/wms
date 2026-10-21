@@ -1,0 +1,18 @@
+{
+  "platform": "Linux",
+  "scope": "Mac launcher serve function; actual HTTP/SQLite/loopback; desktop APIs disabled",
+  "native_mac_tested": false,
+  "healthy": {
+    "status": "ok"
+  },
+  "on_hand": 100,
+  "accounts": 5,
+  "spaces_and_unicode_paths": true,
+  "token_in_logs": false,
+  "loopback": true,
+  "sigint_exit": 0,
+  "reconciliation": {
+    "ok": true,
+    "issues": []
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "environment": "isolated temporary SQLite database; synthetic test inventory",
+  "flow": "UI HTTP API: receive 100 -> QC -> putaway -> order 3 -> reserve -> pick -> verify -> pack -> ship -> 97",
+  "checks": [
+    {
+      "action": "owner",
+      "status": 200
+    },
+    {
+      "action": "warehouse",
+      "status": 200
+    },
+    {
+      "action": "location",
+      "status": 200
+    },
+    {
+      "action": "sku",
+      "status": 200
+    },
+    {
+      "action": "store",
+      "status": 200
+    },
+    {
+      "action": "receipt",
+      "status": 200
+    },
+    {
+      "action": "receipt-qc",
+      "status": 200
+    },
+    {
+      "action": "receipt-putaway",
+      "status": 200
+    },
+    {
+      "action": "order",
+      "status": 200
+    },
+    {
+      "action": "reserve",
+      "status": 200
+    },
+    {
+      "action": "pick",
+      "status": 200
+    },
+    {
+      "action": "verify",
+      "status": 200
+    },
+    {
+      "action": "pack",
+      "status": 200
+    },
+    {
+      "action": "ship",
+      "status": 200
+    },
+    {
+      "action": "fee",
+      "status": 200
+    }
+  ],
+  "inventory": [
+    {
+      "on_hand": 97,
+      "reserved": 0,
+      "picked": 0,
+      "available": 97
+    }
+  ],
+  "reconciliation": {
+    "ok": true,
+    "issues": []
+  },
+  "languages": [
+    "zh-CN",
+    "pt-BR"
+  ],
+  "viewports": [
+    "1440x1000",
+    "390x844"
+  ],
+  "javascript_errors": [],
+  "committed_response_loss_retry": "same idempotency key; one receipt",
+  "brl_currency_display": "1,50",
+  "warehouse_record_timezone": "America/Sao_Paulo",
+  "refresh_display_timezone": "Asia/Shanghai",
+  "erp_real_authorization_tested": false,
+  "physical_scanner_tested": false
+}

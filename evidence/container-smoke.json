@@ -1,0 +1,9 @@
+{
+  "http_flow": "100 -> reserve/pick/pack 3 -> ship -> 97",
+  "reconciliation": true,
+  "non_root_uid": 10001,
+  "erp_enabled": false,
+  "restart_persistence": true,
+  "network": "none; no published ports",
+  "elapsed_seconds": 4.882
+}

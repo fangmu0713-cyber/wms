@@ -1,0 +1,19 @@
+{
+  "integrity": "ok",
+  "foreign_keys": "ok",
+  "ledger_balances": "ok",
+  "counts": {
+    "orders": 1,
+    "inventory": 1,
+    "ledger": 4,
+    "receipts": 1,
+    "returns": 0,
+    "fees": 1
+  },
+  "elapsed_seconds": 0.0024,
+  "source_unchanged": true,
+  "restored_snapshot_matches": true,
+  "restored_on_hand": 97,
+  "credential_file_mode": "0600",
+  "environment": "temporary synthetic test database"
+}

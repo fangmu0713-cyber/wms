@@ -1,0 +1,9 @@
+.git
+.env
+var
+*.token
+*.sqlite3*
+__pycache__
+**/__pycache__
+evidence
+.venv

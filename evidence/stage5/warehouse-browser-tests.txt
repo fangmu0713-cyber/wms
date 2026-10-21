@@ -1,0 +1,73 @@
+test_movements_custody_retry_waves_and_shipping (__main__.BrowserWarehouseFlow.test_movements_custody_retry_waves_and_shipping) ... api_request status=200 duration_ms=2.9
+api_request status=200 duration_ms=1.8
+api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=3.0
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=2.1
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=3.0
+api_request status=200 duration_ms=13.0
+api_request status=200 duration_ms=4.4
+api_request status=200 duration_ms=11.0
+api_request status=200 duration_ms=4.8
+api_request status=200 duration_ms=4.4
+api_request status=200 duration_ms=8.7
+api_request status=200 duration_ms=17.6
+api_request status=200 duration_ms=53.4
+api_request status=200 duration_ms=22.7
+api_request status=200 duration_ms=43.9
+api_request status=200 duration_ms=11.0
+api_request status=200 duration_ms=8.5
+api_request status=200 duration_ms=6.3
+api_request status=200 duration_ms=7.9
+api_request status=200 duration_ms=10.7
+api_request status=409 duration_ms=6.9
+api_request status=200 duration_ms=37.2
+api_request status=200 duration_ms=12.8
+api_request status=200 duration_ms=7.1
+api_request status=200 duration_ms=6.1
+api_request status=200 duration_ms=6.6
+api_request status=200 duration_ms=12.2
+api_request status=200 duration_ms=9.8
+api_request status=200 duration_ms=4.8
+api_request status=200 duration_ms=17.7
+api_request status=200 duration_ms=7.2
+api_request status=200 duration_ms=28.7
+api_request status=200 duration_ms=5.9
+api_request status=200 duration_ms=5.1
+api_request status=200 duration_ms=10.0
+api_request status=200 duration_ms=4.8
+api_request status=200 duration_ms=4.2
+api_request status=200 duration_ms=8.5
+api_request status=200 duration_ms=14.6
+api_request status=200 duration_ms=12.2
+api_request status=200 duration_ms=17.7
+api_request status=200 duration_ms=11.9
+api_request status=200 duration_ms=9.4
+api_request status=200 duration_ms=6.6
+api_request status=200 duration_ms=6.2
+api_request status=200 duration_ms=8.7
+api_request status=200 duration_ms=7.1
+api_request status=200 duration_ms=14.8
+api_request status=200 duration_ms=4.3
+api_request status=200 duration_ms=11.9
+api_request status=200 duration_ms=8.5
+api_request status=200 duration_ms=5.0
+api_request status=200 duration_ms=7.0
+api_request status=200 duration_ms=5.2
+api_request status=200 duration_ms=4.5
+api_request status=200 duration_ms=6.3
+api_request status=200 duration_ms=9.2
+api_request status=200 duration_ms=26.7
+api_request status=200 duration_ms=3.1
+api_request status=200 duration_ms=10.2
+api_request status=200 duration_ms=3.0
+api_request status=200 duration_ms=6.4
+api_request status=200 duration_ms=4.7
+ok
+
+----------------------------------------------------------------------
+Ran 1 test in 14.179s
+
+OK

@@ -1,0 +1,54 @@
+test_blind_recount_shipments_and_exactly_once_delta_approval (__main__.BrowserCountFlow.test_blind_recount_shipments_and_exactly_once_delta_approval) ... api_request status=200 duration_ms=8.2
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=3.1
+api_request status=200 duration_ms=2.8
+api_request status=200 duration_ms=2.5
+api_request status=200 duration_ms=4.8
+api_request status=200 duration_ms=5.6
+api_request status=200 duration_ms=10.1
+api_request status=200 duration_ms=27.8
+api_request status=200 duration_ms=12.0
+api_request status=200 duration_ms=13.1
+api_request status=200 duration_ms=4.1
+api_request status=200 duration_ms=5.8
+api_request status=200 duration_ms=9.6
+api_request status=404 duration_ms=2.6
+api_request status=200 duration_ms=7.1
+api_request status=200 duration_ms=10.7
+api_request status=200 duration_ms=11.4
+api_request status=200 duration_ms=9.1
+api_request status=200 duration_ms=6.0
+api_request status=200 duration_ms=3.1
+api_request status=200 duration_ms=8.6
+api_request status=200 duration_ms=14.0
+api_request status=200 duration_ms=26.6
+api_request status=200 duration_ms=8.9
+api_request status=200 duration_ms=6.3
+api_request status=200 duration_ms=22.8
+api_request status=200 duration_ms=17.4
+api_request status=200 duration_ms=40.1
+api_request status=200 duration_ms=8.8
+api_request status=200 duration_ms=32.2
+api_request status=200 duration_ms=16.3
+api_request status=200 duration_ms=10.7
+api_request status=200 duration_ms=11.9
+api_request status=200 duration_ms=5.5
+api_request status=200 duration_ms=32.3
+api_request status=200 duration_ms=4.7
+api_request status=200 duration_ms=5.4
+api_request status=200 duration_ms=5.2
+api_request status=200 duration_ms=7.8
+api_request status=200 duration_ms=7.5
+api_request status=200 duration_ms=1.7
+api_request status=200 duration_ms=11.1
+api_request status=200 duration_ms=34.9
+api_request status=200 duration_ms=3.7
+api_request status=200 duration_ms=9.0
+api_request status=200 duration_ms=4.9
+ok
+
+----------------------------------------------------------------------
+Ran 1 test in 10.555s
+
+OK

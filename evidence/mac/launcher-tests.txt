@@ -1,0 +1,26 @@
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+test_clipboard_rejects_missing_wrong_format_and_symlink_without_seeding (tests.test_mac_launcher.MacLauncherTests.test_clipboard_rejects_missing_wrong_format_and_symlink_without_seeding) ... ok
+test_clipboard_rejects_revoked_expired_or_mismatched_tokens (tests.test_mac_launcher.MacLauncherTests.test_clipboard_rejects_revoked_expired_or_mismatched_tokens) ... ok
+test_command_entrypoints_keep_executable_bits_and_valid_bash_syntax (tests.test_mac_launcher.MacLauncherTests.test_command_entrypoints_keep_executable_bits_and_valid_bash_syntax) ... ok
+test_existing_foreign_service_is_not_reused_when_default_port_busy (tests.test_mac_launcher.MacLauncherTests.test_existing_foreign_service_is_not_reused_when_default_port_busy) ... ok
+test_held_instance_lock_blocks_second_launch_and_releases_normally (tests.test_mac_launcher.MacLauncherTests.test_held_instance_lock_blocks_second_launch_and_releases_normally) ... ok
+test_missing_offline_wheels_does_not_create_or_replace_runtime (tests.test_mac_launcher.MacLauncherTests.test_missing_offline_wheels_does_not_create_or_replace_runtime) ... ok
+test_non_mac_and_old_mac_stopped_before_setup (tests.test_mac_launcher.MacLauncherTests.test_non_mac_and_old_mac_stopped_before_setup) ... ok
+test_persistent_mac_data_directory_separate_from_extracted_source (tests.test_mac_launcher.MacLauncherTests.test_persistent_mac_data_directory_separate_from_extracted_source) ... ok
+test_runtime_uses_pinned_metadata_and_import_check (tests.test_mac_launcher.MacLauncherTests.test_runtime_uses_pinned_metadata_and_import_check) ... ok
+test_selected_token_only_to_clipboard_stdin_never_printed_or_in_argv (tests.test_mac_launcher.MacLauncherTests.test_selected_token_only_to_clipboard_stdin_never_printed_or_in_argv) ... ok
+test_existing_unrecognized_directory_and_symlink_refused (tests.test_local_trial.LocalTrialTests.test_existing_unrecognized_directory_and_symlink_refused) ... ok
+test_new_trial_scopes_balances_and_restart_does_not_reseed (tests.test_local_trial.LocalTrialTests.test_new_trial_scopes_balances_and_restart_does_not_reseed) ... api_request status=200 duration_ms=7.7
+api_request status=200 duration_ms=3.7
+api_request status=200 duration_ms=2.3
+api_request status=200 duration_ms=2.0
+api_request status=200 duration_ms=2.2
+api_request status=200 duration_ms=1.9
+ok
+test_revoked_credential_stops_trial_without_mutating_data (tests.test_local_trial.LocalTrialTests.test_revoked_credential_stops_trial_without_mutating_data) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.835s
+
+OK

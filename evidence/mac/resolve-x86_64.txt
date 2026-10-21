@@ -1,0 +1,16 @@
+WARNING: The directory '/home/agent/.cache/pip' or its parent directory is not owned or is not writable by the current user. The cache has been disabled. Check the permissions and owner of that directory. If executing pip with sudo, you should use sudo's -H flag.
+Looking in links: /workspace/wms-mac-build/wheels/x86_64
+Processing /workspace/wms-mac-build/wheels/x86_64/fastapi-0.141.1-py3-none-any.whl (from -r requirements.lock (line 2))
+Processing /workspace/wms-mac-build/wheels/x86_64/uvicorn-0.52.1-py3-none-any.whl (from -r requirements.lock (line 3))
+Processing /workspace/wms-mac-build/wheels/x86_64/pydantic-2.13.4-py3-none-any.whl (from -r requirements.lock (line 4))
+Processing /workspace/wms-mac-build/wheels/x86_64/starlette-1.6.0-py3-none-any.whl (from -r requirements.lock (line 5))
+Processing /workspace/wms-mac-build/wheels/x86_64/anyio-4.14.2-py3-none-any.whl (from -r requirements.lock (line 6))
+Processing /workspace/wms-mac-build/wheels/x86_64/pydantic_core-2.46.4-cp312-cp312-macosx_10_12_x86_64.whl (from -r requirements.lock (line 7))
+Processing /workspace/wms-mac-build/wheels/x86_64/click-8.4.2-py3-none-any.whl (from -r requirements.lock (line 8))
+Processing /workspace/wms-mac-build/wheels/x86_64/h11-0.16.0-py3-none-any.whl (from -r requirements.lock (line 9))
+Processing /workspace/wms-mac-build/wheels/x86_64/typing_extensions-4.16.0-py3-none-any.whl (from -r requirements.lock (line 10))
+Processing /workspace/wms-mac-build/wheels/x86_64/typing_inspection-0.4.3-py3-none-any.whl (from -r requirements.lock (line 11))
+Processing /workspace/wms-mac-build/wheels/x86_64/annotated_doc-0.0.5-py3-none-any.whl (from -r requirements.lock (line 12))
+Processing /workspace/wms-mac-build/wheels/x86_64/annotated_types-0.8.0-py3-none-any.whl (from -r requirements.lock (line 13))
+Processing /workspace/wms-mac-build/wheels/x86_64/idna-3.18-py3-none-any.whl (from -r requirements.lock (line 14))
+Would install annotated-doc-0.0.5 annotated-types-0.8.0 anyio-4.14.2 click-8.4.2 fastapi-0.141.1 h11-0.16.0 idna-3.18 pydantic-2.13.4 pydantic_core-2.46.4 starlette-1.6.0 typing-inspection-0.4.3 typing_extensions-4.16.0 uvicorn-0.52.1

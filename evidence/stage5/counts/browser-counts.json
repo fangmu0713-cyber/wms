@@ -1,0 +1,43 @@
+{
+  "environment": "isolated SQLite; synthetic data; real browser/HTTP",
+  "scope": "one SKU, one specified bin",
+  "first": {
+    "baseline": 100,
+    "observed": 98,
+    "held": 2
+  },
+  "recount": {
+    "baseline_after_shipment": 97,
+    "observed": 95,
+    "delta": -2,
+    "different_operator": true
+  },
+  "subsequent_shipments": [
+    3,
+    5
+  ],
+  "book_before_approval": 92,
+  "after_delta_approval": 90,
+  "count_adjust_events": 1,
+  "blind_api_book_fields_absent": true,
+  "other_operator_attempt_denied": true,
+  "committed_response_loss_retry": [
+    "blind submission",
+    "administrator approval"
+  ],
+  "reconciliation": {
+    "ok": true,
+    "issues": []
+  },
+  "javascript_errors": [],
+  "languages": [
+    "zh-CN",
+    "pt-BR"
+  ],
+  "viewports": [
+    "1440x1000",
+    "390x844"
+  ],
+  "physical_devices_tested": false,
+  "erp_connected": false
+}

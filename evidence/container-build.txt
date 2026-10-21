@@ -1,0 +1,44 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.14kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/python:3.12.14-slim@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 115B done
+#3 DONE 0.0s
+
+#4 [1/7] FROM docker.io/library/python:3.12.14-slim@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 87.98kB done
+#5 DONE 0.0s
+
+#6 [2/7] WORKDIR /srv/wms
+#6 CACHED
+
+#7 [3/7] COPY requirements.lock ./
+#7 CACHED
+
+#8 [4/7] COPY wheelhouse /tmp/wheels
+#8 CACHED
+
+#9 [5/7] RUN if [ "1" = "1" ]; then pip install --no-cache-dir --no-index --find-links=/tmp/wheels -r requirements.lock; else pip install --no-cache-dir -r requirements.lock; fi     && rm -rf /tmp/wheels     && groupadd --gid 10001 wms && useradd --uid 10001 --gid 10001 --no-create-home wms     && mkdir /data && chown 10001:10001 /data
+#9 CACHED
+
+#10 [6/7] COPY --chown=10001:10001 app ./app
+#10 DONE 1.3s
+
+#11 [7/7] COPY --chown=10001:10001 scripts/entrypoint.sh /srv/wms/entrypoint.sh
+#11 DONE 1.5s
+
+#12 exporting to image
+#12 exporting layers
+#12 exporting layers 1.0s done
+#12 writing image sha256:203c1cc465c5d8b6bd574a5121d234ee58ae006fea2d71b2adb051173d873ed3 done
+#12 naming to docker.io/library/overseas-wms:0.1.0 done
+#12 DONE 1.0s

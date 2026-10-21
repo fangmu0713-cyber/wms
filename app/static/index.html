@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#163d35">
+  <title>Atlas · 海外仓作业台</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/warehouse-config.js" defer></script>
+  <script src="/static/count-config.js" defer></script>
+  <script src="/static/transfer-config.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <a href="#main" class="skip-link" data-i18n="skip">跳转到主内容</a>
+  <aside class="sidebar">
+    <a class="brand" href="#overview" aria-label="Atlas"><span class="brand-mark">A</span><span>ATLAS<small data-i18n="brandSub">海外仓协同系统</small></span></a>
+    <div class="sidebar-caption" data-i18n="workspace">工作空间</div>
+    <nav id="navigation" aria-label="主导航">
+      <button class="nav-item active" data-view="overview"><span aria-hidden="true">◫</span><span data-i18n="overview">工作总览</span></button>
+      <button class="nav-item" data-view="masters"><span aria-hidden="true">▦</span><span data-i18n="masters">基础资料</span></button>
+      <button class="nav-item" data-view="inbound"><span aria-hidden="true">↙</span><span data-i18n="inbound">收货与上架</span></button>
+      <button class="nav-item" data-view="orders"><span aria-hidden="true">▤</span><span data-i18n="orders">订单管理</span></button>
+      <button class="nav-item" data-view="waves" hidden><span aria-hidden="true">≋</span><span data-i18n="waves">波次与拣货任务</span></button>
+      <button class="nav-item" data-view="movements" hidden><span aria-hidden="true">⇢</span><span data-i18n="movements">补货与移位</span></button>
+      <button class="nav-item" data-view="transfers" hidden><span aria-hidden="true">⇄</span><span data-i18n="transfers">跨仓调拨</span></button>
+      <button class="nav-item" data-view="counts" hidden><span aria-hidden="true">▧</span><span data-i18n="counts">盘点与复盘</span></button>
+      <button class="nav-item" data-view="pda"><span aria-hidden="true">⌗</span><span data-i18n="pda">PDA 扫码作业</span></button>
+      <button class="nav-item" data-view="inventory"><span aria-hidden="true">▥</span><span data-i18n="inventory">库存与流水</span></button>
+      <button class="nav-item" data-view="returns"><span aria-hidden="true">↶</span><span data-i18n="returns">退货处理</span></button>
+      <button class="nav-item" data-view="finance"><span aria-hidden="true">$</span><span data-i18n="finance">费用与对账</span></button>
+      <div class="sidebar-caption" data-i18n="connections">连接与能力</div>
+      <button class="nav-item" data-view="integrations"><span aria-hidden="true">⇄</span><span data-i18n="integrations">官方 ERP 中心</span><span class="nav-dot"></span></button>
+      <button class="nav-item" data-view="roadmap"><span aria-hidden="true">◇</span><span data-i18n="roadmap">交付范围</span></button>
+    </nav>
+    <div class="sidebar-footer"><span class="live-dot"></span><span data-i18n="phase">阶段 1 · 内部业务闭环</span><small>BRL · 中文 / Português</small></div>
+  </aside>
+  <div class="shell">
+    <header class="topbar">
+      <div class="mode-switch" role="group" aria-label="工作端">
+        <button data-mode="wms" class="active">WMS</button><button data-mode="oms">OMS</button><button data-mode="pda">PDA</button>
+      </div>
+      <div class="topbar-right"><label class="sr-only" for="language" data-i18n="language">语言</label><select id="language"><option value="zh-CN">简体中文</option><option value="pt-BR">Português (BR)</option></select><span id="identity" class="identity" data-i18n="disconnected">未连接</span><button id="logout" class="text-button" hidden data-i18n="logout">退出</button></div>
+    </header>
+    <main id="main" tabindex="-1">
+      <section class="page-heading"><div><div class="eyebrow" id="view-eyebrow">WAREHOUSE OPERATIONS</div><h1 id="page-title">工作总览</h1><p id="page-description">从实际收货到交接出库，让每一件库存都有依据。</p></div><button id="refresh" class="button secondary" disabled><span aria-hidden="true">↻</span> <span data-i18n="refresh">刷新数据</span></button></section>
+      <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+      <section id="login-panel" class="card login-panel">
+        <div><span class="section-kicker">01 / CONNECT</span><h2 data-i18n="loginTitle">连接你的仓库</h2><p data-i18n="loginHelp">使用管理员签发的访问令牌登录。令牌仅保存在当前页面内存中，刷新页面后需重新登录。</p></div>
+        <form id="login-form"><label for="api-token" data-i18n="accessToken">访问令牌</label><input id="api-token" name="token" type="password" required autocomplete="off" spellcheck="false" placeholder="Bearer token"><button class="button" type="submit" data-i18n="connect">连接工作空间</button></form>
+      </section>
+      <div id="connected-content" hidden>
+        <section data-panel="transfers" hidden><div class="section-note" data-i18n="transferHelp"></div><div id="transfer-forms" class="forms-grid"></div><article class="card"><h2 data-i18n="transferRecords"></h2><div id="transfer-records"></div></article><article class="card"><h2 data-i18n="transferEvents"></h2><div id="transfer-event-records"></div></article></section>
+        <section data-panel="counts" hidden><div id="count-help" class="section-note"></div><div id="count-forms" class="forms-grid"></div><article class="card" id="count-session-card"><h2 data-i18n="countSessions"></h2><div id="count-session-records"></div></article><article class="card" id="count-lines-card"><h2 data-i18n="countLines"></h2><div id="count-line-records"></div></article><article class="card"><h2 id="count-attempt-heading"></h2><div id="count-attempt-records"></div></article></section>
+        <section data-panel="waves" hidden><div class="section-note" data-i18n="waveHelp"></div><div id="wave-forms" class="forms-grid"></div><article class="card"><h2 data-i18n="waves"></h2><div id="wave-records"></div></article><article class="card"><h2 data-i18n="pickTasks"></h2><div id="task-records"></div></article></section>
+        <section data-panel="movements" hidden><div class="section-note" data-i18n="movementHelp"></div><div id="movement-forms" class="forms-grid"></div><article class="card"><h2 data-i18n="movementRecords"></h2><div id="movement-records"></div></article></section>
+
+        <section data-panel="overview">
+          <div class="hero"><div><span class="section-kicker" data-i18n="today">此刻 · 实时业务</span><h2 data-i18n="heroTitle">货物流转，清晰有序。</h2><p data-i18n="heroText">收货、预占、拣货、复核与出库使用独立状态，库存以实际交接为准。</p><button class="button light" data-go="inbound" data-i18n="startReceiving">开始收货 ↗</button></div><div class="hero-symbol" aria-hidden="true"><div class="box box-one"></div><div class="box box-two"></div><div class="box box-three"></div><span>IN → OUT</span></div></div>
+          <div class="metrics" id="metrics"></div>
+          <div class="overview-grid"><article class="card"><div class="card-heading"><h2 data-i18n="fulfillmentFlow">履约路径</h2><span class="badge" data-i18n="liveData">数据库实时数据</span></div><div class="flow" id="flow"></div><p class="muted" data-i18n="flowHelp">预占、拣货和打包不减少实物库存；仅实际交接出库扣减一次。</p></article><article class="card"><div class="card-heading"><h2 data-i18n="integrity">库存核对</h2><span class="status-dot" id="integrity-dot"></span></div><div id="reconciliation-summary"></div><button class="text-button" data-go="inventory" data-i18n="seeLedger">查看库存与流水 →</button></article></div>
+          <article class="card"><div class="card-heading"><h2 data-i18n="recentOrders">最近订单</h2><button class="text-button" data-go="orders" data-i18n="allOrders">全部订单 →</button></div><div id="recent-orders"></div></article>
+        </section>
+        <section data-panel="masters" hidden><div class="section-note" data-i18n="masterHelp">先建立货主和仓库，再建立库位、SKU 与店铺。所有资料均受服务端权限控制。</div><div id="master-forms" class="forms-grid"></div><article class="card"><h2 data-i18n="masterRecords">基础资料列表</h2><div id="master-records"></div></article></section>
+        <section data-panel="inbound" hidden><div class="process-strip"><span data-i18n="receive">01 实际收货</span><span>→</span><span data-i18n="quality">02 质量检验</span><span>→</span><span data-i18n="putaway">03 合格上架</span></div><div id="inbound-forms" class="forms-grid"></div><article class="card"><h2 data-i18n="receipts">入库单据</h2><div id="receipt-records"></div></article></section>
+        <section data-panel="orders" hidden><div class="section-note" data-i18n="orderHelp">手工订单直接写入本系统数据库。ERP 推单须取得官方授权后另行启用。</div><div id="order-forms" class="forms-grid"></div><article class="card"><h2 data-i18n="orders">订单管理</h2><div id="order-records"></div></article><article class="card"><h2 data-i18n="allocationDetail">订单行与预占明细</h2><div id="allocation-records"></div></article></section>
+        <section data-panel="pda" hidden><div class="scanner-banner"><span class="scan-icon" aria-hidden="true">▥</span><div><h2 data-i18n="scanTitle">扫描、核对、交接</h2><p data-i18n="scanHelp">支持条码枪键盘输入。逐次提交等待服务端确认；断网不会显示成功。相机、打印机与实物 PDA 待验收。</p></div></div><div id="pda-forms" class="forms-grid"></div></section>
+        <section data-panel="inventory" hidden><div class="section-note" data-i18n="inventoryHelp">在库为合格上架余额；待检、合格未上架和不合格品单独统计，不能销售。已拣属于已预占数量，不重复扣减可用库存。</div><article class="card"><div class="card-heading"><h2 data-i18n="inventoryBalance">库存余额</h2><span class="badge" data-i18n="readOnly">只读 · 服务端核算</span></div><div id="inventory-records"></div></article><article class="card"><h2 data-i18n="stockQuality">实物数量与质量状态</h2><div id="stock-quality-records"></div></article><article class="card"><h2 data-i18n="ledger">库存流水</h2><p class="muted" data-i18n="datesTimezone">单据日期按对应仓库时区显示；悬停时间查看时区。</p><div id="ledger-records"></div></article><article class="card"><h2 data-i18n="reconciliation">余额与账本核对</h2><div id="reconciliation-records"></div></article></section>
+        <section data-panel="returns" hidden><div class="section-note" data-i18n="returnHelp">仅支持关联已出库订单的退货。退货申请与签收不增加可售库存，合格上架后才入账。</div><div id="return-forms" class="forms-grid"></div><article class="card"><h2 data-i18n="returnRecords">退货记录</h2><div id="return-records"></div></article></section>
+        <section data-panel="finance" hidden><div class="section-note" data-i18n="feeHelp">当前支持管理员手工登记订单费用，金额以 BRL 分为单位。相同订单和收费代码禁止重复收费；自动报价、仓租与账单尚未实现。</div><div id="fee-forms" class="forms-grid"></div><article class="card"><h2 data-i18n="feeRecords">费用记录 · BRL</h2><div id="fee-records"></div></article></section>
+        <section data-panel="integrations" hidden><div class="integration-warning"><span class="badge warning" data-i18n="pendingAuthorization">待真实授权</span><h2 data-i18n="erpTitle">官方接入，逐项验证。</h2><p data-i18n="erpHelp">卖家自用 API、海外仓服务商接入、本系统开放 API 是三种不同路径。当前未完成任何 ERP 真实闭环，不使用模拟成功响应。</p></div><div id="integration-records" class="forms-grid"></div></section>
+        <section data-panel="roadmap" hidden><article class="card"><h2 data-i18n="deliveryBoundary">交付范围与后续能力</h2><div id="roadmap-records"></div></article></section>
+      </div>
+      <footer class="page-footer"><span>ATLAS / OPERATIONS</span><span id="last-refresh" data-i18n="awaitConnection">等待连接真实后端</span></footer>
+    </main>
+  </div>
+</body>
+</html>
