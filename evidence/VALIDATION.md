@@ -1,3 +1,9 @@
+# Mac源码启动包补充
+
+新增双击入口、用户Library持久目录、两种Mac架构离线依赖与凭证复制。Mac专项13项及Linux真实serve烟测通过，离线依赖跨平台解析及Mach-O文件头通过；详情见[mac/README.md](mac/README.md)。业务/API/迁移/requirements.lock保持0.5基线。当前无Mac实机，不声称Finder/桌面API、签名或安装器实测通过。以下为已有0.5业务验收历史。
+
+---
+
 # 0.5 跨仓调拨与隔离本地试用验收
 
 当前结果来自独立临时SQLite/真实HTTP/Chromium/虚构货物，不代表生产上线、真实ERP连接或实物设备验收。

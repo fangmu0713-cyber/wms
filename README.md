@@ -43,3 +43,5 @@ python -m tests.load_probe
 本地试用：安装requirements.lock后执行`python -m scripts.local_trial`，浏览器打开http://127.0.0.1:8000。仅此显式入口生成独立示例库和五个本机保护凭证，不覆盖已有业务库。Windows/macOS/Linux步骤、账号切换与逐步验收见[本地试用指南](docs/LOCAL_TRIAL.md)。
 
 跨仓调拨：主管建单锁定源仓库存 → 源仓实际发出转在途 → 目标仓按唯一签收批次分批确认合格到货。源仓发出/目标仓接收按各自仓权限执行；管理员可填写依据将全部剩余在途确认为丢失并结案。两类在途分开核算；已确认丢失不再计入保管实物，未查明异常继续在途。迁移005；不可直接降级忽略调拨锁/在途的旧代码。
+
+Mac专用启动包：完整包包含两种芯片的离线依赖，安装Python3.12后双击根目录“启动仓储.command”，自动打开本地页面并复制管理员令牌；岗位切换使用“复制登录凭证.command”。数据位于用户Library/Application Support/AtlasWMS/Trial-0.5，详情见[Mac试用指南](docs/MAC_TRIAL.md)。这是源码启动包，尚无Mac实机验收，不是免Python的签名.app。

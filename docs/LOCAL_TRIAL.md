@@ -2,6 +2,8 @@
 
 这是浏览器访问的WMS/OMS/PDA应用。当前交付是源码和本地试用入口，没有公网生产网址。试用时只使用虚构数据；真实客户、真实库存和ERP接入留待正式验收。无需连接GitHub或ERP账号。
 
+Mac用户可以使用带双击入口及两种芯片离线依赖的专用包，详见[MAC_TRIAL.md](MAC_TRIAL.md)。下文是通用命令行入口；Mac专用入口的数据存放在用户Library目录。
+
 ## 1. 准备和启动
 
 电脑需安装Python 3.12，并能下载项目锁定的Python依赖。解压源码包，进入有README.md的wms文件夹。Windows建议使用PowerShell：

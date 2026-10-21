@@ -9,3 +9,5 @@ var/
 *.token
 playwright-report/
 wheelhouse/*.whl
+mac-wheels/
+.mac-install.lock

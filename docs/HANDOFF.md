@@ -45,3 +45,10 @@ WMS_EVIDENCE_DIR=evidence/stage5/legacy python -m tests.browser_flow -v
 0.5镜像标签更新，本轮未构建验收容器/长期压测；旧0.1容器/容量探针仅历史证据。Windows/macOS步骤未在这些实机上验收。无生产服务器/域名授权或公网网址，未动VPS/SSH/安全组/外部运行服务。只更新原草稿PR，不合并或部署。
 
 先备份再迁移005，无down。旧0.3不执行count_only及盘点锁，旧0.4也不理解调拨在途/待发锁，禁止直接降级继续写。异常停写、保留全部新流水、隔离备份和人工对账/前向修复，不删除元数据或覆盖库存。源码包只含受控源码/证据/Git可用历史，不含业务库、令牌或wheels。
+
+
+## Mac试用包续接
+
+用户要求Mac版，新增根目录两个.command、scripts/mac_launcher.py/.sh及打包脚本package_mac.py。Mac指南MAC_TRIAL；需Python3.12/macOS11+，源码启动包，非签名.app。Mac入口将库放用户Library/Application Support/AtlasWMS/Trial-0.5，原var试用库不擅自迁移。venv在解压目录，wheels由pip按锁定版本获取（arm64/x86_64）只进分发包，二进制不提交Git；可按requirements.lock用pip download --only-binary指定cp312/mac平台重新获取，然后执行python -m scripts.package_mac --wheels WHEEL_ROOT --output ZIP_PATH。打包会核对锁定版本、原生wheel标签、CRC和.command执行位。
+
+逻辑测试在Linux，Mac桌面命令open/pbcopy使用明确stub；离线pip跨平台dry-run不等于运行Mach-O。测试/服务烟测见evidence/mac，不宣称Mac实机、Gatekeeper/签名验收。凭证只走pbcopy stdin，不得把值打印、放进参数/URL或进包。库实例锁覆盖首次准备和服务生命周期，复制凭证独立只读校验，能在运行时使用。
